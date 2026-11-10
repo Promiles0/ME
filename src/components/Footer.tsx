@@ -11,7 +11,7 @@ export default function Footer() {
   }
 
   return (
-    <footer className="on-ink relative overflow-hidden bg-ink text-cream">
+    <footer data-nav-theme="dark" className="on-ink relative overflow-hidden bg-ink text-cream">
       <div className="mx-auto flex max-w-[88rem] flex-col gap-10 px-6 pb-10 pt-16 md:px-10">
         <p className="display select-none text-[clamp(4rem,19vw,19rem)] leading-[0.8] text-cream/10" aria-hidden>
           {profile.shortName}

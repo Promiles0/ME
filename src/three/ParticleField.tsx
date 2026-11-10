@@ -201,7 +201,7 @@ export default function ParticleField({ word, handle, active, className }: Props
 
   useEffect(() => {
     let alive = true
-    const load = document.fonts?.load('400 200px "Bebas Neue"') ?? Promise.resolve()
+    const load = document.fonts?.load('400 200px "Bebas Neue"').catch(() => undefined) ?? Promise.resolve()
     Promise.race([load, new Promise((r) => setTimeout(r, 1500))]).then(() => alive && setFontReady(true))
     return () => {
       alive = false

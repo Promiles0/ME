@@ -14,7 +14,7 @@ export default function Skills() {
   const reduced = useReducedMotion()
 
   return (
-    <section id="skills" className="relative overflow-hidden bg-ink py-28 text-cream md:py-40 on-ink">
+    <section id="skills" data-nav-theme="dark" className="relative overflow-hidden bg-ink py-28 text-cream md:py-40 on-ink">
       <div className="stripe bg-cream/10" style={{ left: '72%' }} />
 
       <div className="relative mx-auto max-w-[88rem] px-6 md:px-10">

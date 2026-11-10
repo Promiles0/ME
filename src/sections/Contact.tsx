@@ -49,7 +49,7 @@ export default function Contact() {
     'w-full rounded-2xl border border-ink/15 bg-paper/60 px-5 py-4 text-base outline-none transition-colors placeholder:text-ink/40 focus:border-ink focus:bg-paper'
 
   return (
-    <section id="contact" className="relative overflow-hidden bg-cream py-28 md:py-40">
+    <section id="contact" data-nav-theme="light" className="relative overflow-hidden bg-cream py-28 md:py-40">
       <div className="stripe bg-sage/40" style={{ left: '66%' }} />
 
       <div className="relative mx-auto max-w-[88rem] px-6 md:px-10">

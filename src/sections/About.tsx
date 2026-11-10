@@ -42,7 +42,7 @@ export default function About() {
   }, [reduced])
 
   return (
-    <section id="about" ref={section} className="relative overflow-hidden bg-paper py-28 md:py-40">
+    <section id="about" ref={section} data-nav-theme="light" className="relative overflow-hidden bg-paper py-28 md:py-40">
       <div className="stripe bg-cream/60" style={{ left: '-6%' }} />
       <div className="relative mx-auto max-w-[88rem] px-6 md:px-10">
         <SectionHeading index="01" eyebrow="About me" title="Curious," outline="by design" />

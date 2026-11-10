@@ -78,7 +78,7 @@ export default function Hero({ ready }: Props) {
   const last = rest.join(' ')
 
   return (
-    <section ref={section} className="relative h-[190vh]" aria-label="Introduction">
+    <section ref={section} data-nav-theme="light" className="relative h-[190vh]" aria-label="Introduction">
       <div ref={panel} className="sticky top-0 flex h-screen flex-col overflow-hidden">
         {/* Diagonal stripe behind everything */}
         <div className="stripe bg-cream/70" style={{ left: '58%' }} />
@@ -86,7 +86,7 @@ export default function Hero({ ready }: Props) {
         {/* Particle cloud */}
         {!reduced && (
           <Suspense fallback={null}>
-            <ParticleField word={profile.shortName.toUpperCase()} handle={field} active={active && ready} className="absolute inset-y-0 left-0 right-0 md:left-[26%]" />
+            <ParticleField word={profile.shortName.toUpperCase()} handle={field} active={active && ready} className="absolute inset-x-0 top-16 h-[46vh] md:inset-y-0 md:left-[32%] md:h-auto" />
           </Suspense>
         )}
         {reduced && (
@@ -166,7 +166,7 @@ export default function Hero({ ready }: Props) {
         <a
           data-hero-fade
           href="#about"
-          className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-0"
+          className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-0 sm:flex"
         >
           <span>Scroll</span>
           <span className="relative h-10 w-px overflow-hidden bg-ink/20">

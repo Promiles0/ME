@@ -65,7 +65,7 @@ export default function Experience() {
   }, [reduced])
 
   return (
-    <section id="experience" ref={section} className="relative overflow-hidden bg-sage py-28 md:py-40">
+    <section id="experience" ref={section} data-nav-theme="light" className="relative overflow-hidden bg-sage py-28 md:py-40">
       <div className="relative mx-auto max-w-[88rem] px-6 md:px-10">
         <SectionHeading index="02" eyebrow="Experience" title="Where I have" outline="been building" />
 
