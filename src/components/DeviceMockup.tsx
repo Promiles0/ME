@@ -11,25 +11,37 @@ type Props = {
 /**
  * A laptop-style device rendered with CSS 3D. It tilts toward the pointer and
  * drifts gently when idle. The screen plays the project's demo video when one
- * is available and visible, and falls back to a still image otherwise.
+ * is available and visible; otherwise it shows the screenshot and slowly pans
+ * down it, as if someone were scrolling the page.
  */
 export default function DeviceMockup({ video, poster, image, alt }: Props) {
   const frame = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
   const vid = useRef<HTMLVideoElement>(null)
+  const img = useRef<HTMLImageElement>(null)
   const reduced = useReducedMotion()
 
-  // Idle float + autoplay only when visible.
+  // Idle float, screenshot pan, and autoplay only when visible.
   useEffect(() => {
     const el = inner.current
     const v = vid.current
     if (!el) return
-    let float: gsap.core.Tween | undefined
+    const tweens: gsap.core.Tween[] = []
     if (!reduced) {
-      float = gsap.to(el, { y: -10, rotateX: 4, duration: 3.2, ease: 'sine.inOut', yoyo: true, repeat: -1 })
+      tweens.push(gsap.to(el, { y: -10, rotateX: 4, duration: 3.2, ease: 'sine.inOut', yoyo: true, repeat: -1 }))
+      if (img.current && !video) {
+        tweens.push(
+          gsap.fromTo(
+            img.current,
+            { objectPosition: '50% 0%' },
+            { objectPosition: '50% 100%', duration: 9, ease: 'sine.inOut', yoyo: true, repeat: -1, repeatDelay: 1.2 },
+          ),
+        )
+      }
     }
     const io = new IntersectionObserver(
       ([e]) => {
+        tweens.forEach((t) => (e.isIntersecting ? t.play() : t.pause()))
         if (!v) return
         if (e.isIntersecting && !reduced) v.play().catch(() => undefined)
         else v.pause()
@@ -38,10 +50,10 @@ export default function DeviceMockup({ video, poster, image, alt }: Props) {
     )
     io.observe(el)
     return () => {
-      float?.kill()
+      tweens.forEach((t) => t.kill())
       io.disconnect()
     }
-  }, [reduced])
+  }, [reduced, video])
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (reduced || e.pointerType !== 'mouse' || !frame.current || !inner.current) return
@@ -77,7 +89,7 @@ export default function DeviceMockup({ video, poster, image, alt }: Props) {
                 aria-label={alt}
               />
             ) : (
-              <img src={image} alt={alt} className="h-full w-full object-cover" loading="lazy" />
+              <img ref={img} src={image} alt={alt} className="h-full w-full object-cover" style={{ objectPosition: '50% 0%' }} loading="lazy" />
             )}
             {/* Screen sheen */}
             <div

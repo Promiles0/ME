@@ -1,7 +1,17 @@
 /**
- * Helpers that produce point clouds for the hero particle field.
+ * Helpers that produce point clouds for the particle fields.
  * Each returns a flat Float32Array of xyz triples, `count` points long.
  */
+
+export type ShapeSet = {
+  a: Float32Array
+  b: Float32Array
+  c: Float32Array
+  /** Optional per-point tone in 0..1 (0 = darkest). Random when omitted. */
+  shade?: Float32Array
+}
+
+export type ShapeBuilder = (count: number, worldWidth: number) => Promise<ShapeSet> | ShapeSet
 
 /** Sample points that fall inside rendered glyphs of `text`. */
 export function textPoints(text: string, count: number, worldWidth: number, fontFamily = 'Bebas Neue'): Float32Array {
@@ -44,6 +54,84 @@ export function textPoints(text: string, count: number, worldWidth: number, font
   return out
 }
 
+/**
+ * Stipple a photo: darker pixels attract more points, near-white pixels get
+ * none. Returns positions plus a per-point shade (luminance) so the shader can
+ * tint dark areas differently from mid-tones. The image is fitted to
+ * `worldWidth` wide, keeping its aspect ratio.
+ */
+export async function imagePoints(
+  src: string,
+  count: number,
+  worldWidth: number,
+  opts: { gamma?: number; cutoff?: number; depth?: number } = {},
+): Promise<{ positions: Float32Array; shade: Float32Array }> {
+  const { gamma = 2.0, cutoff = 0.82, depth = 0.5 } = opts
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const im = new Image()
+    im.crossOrigin = 'anonymous'
+    im.onload = () => resolve(im)
+    im.onerror = reject
+    im.src = src
+  })
+
+  const W = 360
+  const H = Math.round((img.naturalHeight / img.naturalWidth) * W)
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+  ctx.drawImage(img, 0, 0, W, H)
+  const { data } = ctx.getImageData(0, 0, W, H)
+
+  // Luminance per pixel and a weight that favours dark areas.
+  const lum = new Float32Array(W * H)
+  const weight = new Float32Array(W * H)
+  let total = 0
+  for (let i = 0; i < W * H; i++) {
+    const l = (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) / 255
+    lum[i] = l
+    const w = l >= cutoff ? 0 : Math.pow(1 - l / cutoff, gamma)
+    weight[i] = w
+    total += w
+  }
+
+  // Cumulative distribution for weighted sampling.
+  const cdf = new Float32Array(W * H)
+  let acc = 0
+  for (let i = 0; i < W * H; i++) {
+    acc += weight[i] / total
+    cdf[i] = acc
+  }
+  const pick = () => {
+    const r = Math.random()
+    let lo = 0
+    let hi = cdf.length - 1
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if (cdf[mid] < r) lo = mid + 1
+      else hi = mid
+    }
+    return lo
+  }
+
+  const positions = new Float32Array(count * 3)
+  const shade = new Float32Array(count)
+  const scale = worldWidth / W
+  for (let i = 0; i < count; i++) {
+    const idx = pick()
+    const px = (idx % W) + Math.random()
+    const py = Math.floor(idx / W) + Math.random()
+    const l = lum[idx]
+    positions[i * 3] = (px - W / 2) * scale
+    positions[i * 3 + 1] = (H / 2 - py) * scale
+    // Dark areas sit slightly forward for a little relief.
+    positions[i * 3 + 2] = (1 - l) * depth - depth * 0.5 + (Math.random() - 0.5) * 0.08
+    shade[i] = l
+  }
+  return { positions, shade }
+}
+
 /** Evenly distributed points on a sphere (Fibonacci lattice) with light jitter. */
 export function spherePoints(count: number, radius: number): Float32Array {
   const out = new Float32Array(count * 3)
@@ -77,6 +165,17 @@ export function torusKnotPoints(count: number, radius: number, tube: number, p =
     out[i * 3] = cx + nx * tube
     out[i * 3 + 1] = cy + ny * tube
     out[i * 3 + 2] = cz + nz * tube
+  }
+  return out
+}
+
+/** A loose cloud of points, used as the "before" state of an assembling shape. */
+export function scatterPoints(count: number, width: number, height: number, depth = 3): Float32Array {
+  const out = new Float32Array(count * 3)
+  for (let i = 0; i < count; i++) {
+    out[i * 3] = (Math.random() - 0.5) * width * 1.6
+    out[i * 3 + 1] = (Math.random() - 0.5) * height * 1.6
+    out[i * 3 + 2] = (Math.random() - 0.5) * depth
   }
   return out
 }

@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { spherePoints, textPoints, torusKnotPoints } from './textPoints'
+import type { ShapeBuilder, ShapeSet } from './textPoints'
 import { isLowPowerDevice } from '../lib/motion'
 
 /**
- * The hero's signature piece: a cloud of particles that spells a word, and
- * melts into a sphere and then a torus knot as you scroll. The pointer pushes
- * particles out of the way; the whole cloud leans toward the pointer.
+ * A reusable particle cloud. A `shapes` builder supplies three point sets
+ * (a → b → c); `setMorph` blends between them. The pointer pushes particles
+ * aside and the cloud leans toward it. All per-frame movement happens in the
+ * vertex shader so the CPU does almost nothing.
  *
- * All movement happens in the vertex shader, so the CPU does almost nothing
- * per frame. Point count scales down on low-powered devices.
+ * Used for the hero word (a: word, b: sphere, c: torus knot) and the About
+ * portrait (a: scattered, b/c: the face stippled from a photo).
  */
 
 export type ParticleFieldHandle = {
-  /** 0 = word, 1 = sphere, 2 = torus knot. Values in between blend. */
+  /** 0 = shape a, 1 = shape b, 2 = shape c. Values in between blend. */
   setMorph: (v: number) => void
 }
 
@@ -24,13 +25,16 @@ const vertex = /* glsl */ `
   uniform vec3 uMouse;
   uniform float uMouseStrength;
   uniform float uSize;
+  uniform float uShadeSize;
+  uniform float uDrift;
   uniform float uPixelRatio;
 
   attribute vec3 aPosB;
   attribute vec3 aPosC;
   attribute float aRand;
+  attribute float aShade;
 
-  varying float vRand;
+  varying float vShade;
   varying float vForce;
 
   void main() {
@@ -44,7 +48,7 @@ const vertex = /* glsl */ `
 
     // Idle drift: slow, organic breathing.
     float t = uTime * 0.6;
-    p += 0.06 * vec3(
+    p += uDrift * vec3(
       sin(t + aRand * 6.2831),
       cos(t * 0.8 + aRand * 3.1),
       sin(t * 0.7 + aRand * 2.0)
@@ -56,11 +60,11 @@ const vertex = /* glsl */ `
     float force = smoothstep(1.4, 0.0, dist) * uMouseStrength;
     p += normalize(d + 0.0001) * force * 0.9;
     vForce = force;
-    vRand = aRand;
+    vShade = aShade;
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
-    float size = uSize * (0.6 + aRand * 0.8) * (1.0 + force * 1.5);
+    float size = uSize * (0.6 + aRand * 0.8) * (1.0 + force * 1.5) * (1.0 - aShade * uShadeSize);
     gl_PointSize = size * uPixelRatio * (6.0 / -mv.z);
   }
 `
@@ -69,7 +73,8 @@ const fragment = /* glsl */ `
   uniform vec3 uColorA;
   uniform vec3 uColorB;
   uniform vec3 uColorHot;
-  varying float vRand;
+  uniform float uSplit;
+  varying float vShade;
   varying float vForce;
 
   void main() {
@@ -77,43 +82,74 @@ const fragment = /* glsl */ `
     float r = length(uv);
     if (r > 0.5) discard;
     float alpha = smoothstep(0.5, 0.15, r);
-    vec3 col = mix(uColorA, uColorB, step(0.78, vRand));
+    vec3 col = mix(uColorA, uColorB, step(uSplit, vShade));
     col = mix(col, uColorHot, vForce);
     gl_FragColor = vec4(col, alpha * 0.95);
   }
 `
 
-type CloudProps = {
-  word: string
-  count: number
-  handle: React.MutableRefObject<ParticleFieldHandle | null>
-  interactive: boolean
+export type ParticleStyle = {
+  /** Colour for points whose shade is below `split`. */
+  colorA?: string
+  /** Colour for points whose shade is at or above `split`. */
+  colorB?: string
+  /** Colour particles flash when pushed by the pointer. */
+  colorHot?: string
+  split?: number
+  size?: number
+  /** How much point size shrinks for lighter shades (0 = none). */
+  shadeSize?: number
+  /** Amplitude of the idle breathing. */
+  drift?: number
 }
 
-function Cloud({ word, count, handle, interactive }: CloudProps) {
+type CloudProps = {
+  shapes: ShapeBuilder
+  count: number
+  fit: number
+  handle: React.MutableRefObject<ParticleFieldHandle | null>
+  interactive: boolean
+  mouseStrength: number
+  lean: number
+  spin: boolean
+  style: Required<ParticleStyle>
+}
+
+function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: leanAmount, spin, style }: CloudProps) {
   const points = useRef<THREE.Points>(null)
-  const { viewport, size } = useThree()
+  const { viewport, size, gl, invalidate } = useThree()
   const mouse = useRef(new THREE.Vector3(999, 999, 0))
   const target = useRef(new THREE.Vector3(999, 999, 0))
   const lean = useRef({ x: 0, y: 0 })
   const morph = useRef(0)
+  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null)
 
-  const worldWidth = Math.min(viewport.width * 0.78, 9)
+  const worldWidth = Math.min(viewport.width * fit, 9)
 
-  const geometry = useMemo(() => {
-    const g = new THREE.BufferGeometry()
-    const a = textPoints(word, count, worldWidth)
-    const b = spherePoints(count, worldWidth * 0.22)
-    const c = torusKnotPoints(count, worldWidth * 0.2, worldWidth * 0.045)
-    const rand = new Float32Array(count)
-    for (let i = 0; i < count; i++) rand[i] = Math.random()
-    g.setAttribute('position', new THREE.BufferAttribute(a, 3))
-    g.setAttribute('aPosB', new THREE.BufferAttribute(b, 3))
-    g.setAttribute('aPosC', new THREE.BufferAttribute(c, 3))
-    g.setAttribute('aRand', new THREE.BufferAttribute(rand, 1))
-    g.computeBoundingSphere()
-    return g
-  }, [word, count, worldWidth])
+  // Build the point sets (possibly async, e.g. after an image loads).
+  useEffect(() => {
+    let alive = true
+    Promise.resolve(shapes(count, worldWidth)).then((set: ShapeSet) => {
+      if (!alive) return
+      const g = new THREE.BufferGeometry()
+      const rand = new Float32Array(count)
+      for (let i = 0; i < count; i++) rand[i] = Math.random()
+      g.setAttribute('position', new THREE.BufferAttribute(set.a, 3))
+      g.setAttribute('aPosB', new THREE.BufferAttribute(set.b, 3))
+      g.setAttribute('aPosC', new THREE.BufferAttribute(set.c, 3))
+      g.setAttribute('aRand', new THREE.BufferAttribute(rand, 1))
+      g.setAttribute('aShade', new THREE.BufferAttribute(set.shade ?? rand, 1))
+      g.computeBoundingSphere()
+      setGeometry((old) => {
+        old?.dispose()
+        return g
+      })
+      invalidate()
+    })
+    return () => {
+      alive = false
+    }
+  }, [shapes, count, worldWidth, invalidate])
 
   const material = useMemo(
     () =>
@@ -126,37 +162,48 @@ function Cloud({ word, count, handle, interactive }: CloudProps) {
           uTime: { value: 0 },
           uMorph: { value: 0 },
           uMouse: { value: new THREE.Vector3(999, 999, 0) },
-          uMouseStrength: { value: interactive ? 1 : 0 },
-          uSize: { value: 2.4 },
+          uMouseStrength: { value: interactive ? mouseStrength : 0 },
+          uSize: { value: style.size },
+          uShadeSize: { value: style.shadeSize },
+          uDrift: { value: style.drift },
           uPixelRatio: { value: 1 },
-          uColorA: { value: new THREE.Color('#e8d2b5') },
-          uColorB: { value: new THREE.Color('#1a1a16') },
-          uColorHot: { value: new THREE.Color('#fff4e3') },
+          uColorA: { value: new THREE.Color(style.colorA) },
+          uColorB: { value: new THREE.Color(style.colorB) },
+          uColorHot: { value: new THREE.Color(style.colorHot) },
+          uSplit: { value: style.split },
         },
       }),
-    [interactive],
+    [interactive, mouseStrength, style],
   )
 
   useEffect(() => {
-    handle.current = { setMorph: (v) => (morph.current = v) }
+    handle.current = {
+      setMorph: (v) => {
+        morph.current = v
+        invalidate()
+      },
+    }
     return () => {
       handle.current = null
     }
-  }, [handle])
+  }, [handle, invalidate])
 
   useEffect(() => {
     material.uniforms.uPixelRatio.value = Math.min(window.devicePixelRatio, 2)
   }, [material, size])
 
-  // Track the pointer over the whole window so the cloud reacts even when the
-  // pointer is over the hero text, not just the canvas.
+  // Track the pointer over the whole window and convert it into this canvas's
+  // world space, so the cloud reacts even when the pointer is over nearby text.
   useEffect(() => {
     if (!interactive) return
+    const el = gl.domElement
     const onMove = (e: PointerEvent) => {
-      const x = (e.clientX / window.innerWidth) * 2 - 1
-      const y = -(e.clientY / window.innerHeight) * 2 + 1
+      const r = el.getBoundingClientRect()
+      const x = ((e.clientX - r.left) / r.width) * 2 - 1
+      const y = -((e.clientY - r.top) / r.height) * 2 + 1
       target.current.set((x * viewport.width) / 2, (y * viewport.height) / 2, 0)
-      lean.current = { x, y }
+      lean.current = { x: THREE.MathUtils.clamp(x, -1, 1), y: THREE.MathUtils.clamp(y, -1, 1) }
+      invalidate()
     }
     const onLeave = () => target.current.set(999, 999, 0)
     window.addEventListener('pointermove', onMove, { passive: true })
@@ -165,7 +212,7 @@ function Cloud({ word, count, handle, interactive }: CloudProps) {
       window.removeEventListener('pointermove', onMove)
       document.documentElement.removeEventListener('pointerleave', onLeave)
     }
-  }, [interactive, viewport.width, viewport.height])
+  }, [interactive, gl, viewport.width, viewport.height, invalidate])
 
   useFrame((state, delta) => {
     const u = material.uniforms
@@ -176,39 +223,61 @@ function Cloud({ word, count, handle, interactive }: CloudProps) {
 
     const obj = points.current
     if (!obj) return
-    // Lean toward the pointer, and slowly spin once it has become a 3D shape.
-    const spin = u.uMorph.value * state.clock.elapsedTime * 0.25
-    const tx = -lean.current.y * 0.35
-    const ty = lean.current.x * 0.5 + spin
+    const spinAngle = spin ? u.uMorph.value * state.clock.elapsedTime * 0.25 : 0
+    const tx = -lean.current.y * 0.35 * leanAmount
+    const ty = lean.current.x * 0.5 * leanAmount + spinAngle
     obj.rotation.x += (tx - obj.rotation.x) * Math.min(1, delta * 3)
     obj.rotation.y += (ty - obj.rotation.y) * Math.min(1, delta * 3)
   })
 
+  if (!geometry) return null
   return <points ref={points} geometry={geometry} material={material} frustumCulled={false} />
 }
 
 type Props = {
-  word: string
+  shapes: ShapeBuilder
   handle: React.MutableRefObject<ParticleFieldHandle | null>
+  /** Run the render loop. When false the scene renders only on demand. */
   active: boolean
   className?: string
+  /** Fraction of the canvas width the shape should span (0..1). */
+  fit?: number
+  /** 0..1 strength of the pointer repulsion. */
+  mouseStrength?: number
+  /** 0..1 how far the whole cloud leans toward the pointer. */
+  lean?: number
+  /** Slowly rotate once morphed into a 3D shape. */
+  spin?: boolean
+  /** Point counts for capable and low-powered devices. */
+  count?: { high: number; low: number }
+  style?: ParticleStyle
 }
 
-export default function ParticleField({ word, handle, active, className }: Props) {
-  const [fontReady, setFontReady] = useState(false)
+const defaultStyle: Required<ParticleStyle> = {
+  colorA: '#e8d2b5',
+  colorB: '#1a1a16',
+  colorHot: '#fff4e3',
+  split: 0.78,
+  size: 2.4,
+  shadeSize: 0,
+  drift: 0.06,
+}
+
+export default function ParticleField({
+  shapes,
+  handle,
+  active,
+  className,
+  fit = 0.78,
+  mouseStrength = 1,
+  lean = 1,
+  spin = true,
+  count = { high: 22000, low: 9000 },
+  style,
+}: Props) {
   const lowPower = useMemo(isLowPowerDevice, [])
-  const count = lowPower ? 9000 : 22000
-
-  useEffect(() => {
-    let alive = true
-    const load = document.fonts?.load('400 200px "Bebas Neue"').catch(() => undefined) ?? Promise.resolve()
-    Promise.race([load, new Promise((r) => setTimeout(r, 1500))]).then(() => alive && setFontReady(true))
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  if (!fontReady) return null
+  const n = lowPower ? count.low : count.high
+  const merged = useMemo(() => ({ ...defaultStyle, ...style }), [style])
 
   return (
     <div className={className} aria-hidden>
@@ -216,10 +285,20 @@ export default function ParticleField({ word, handle, active, className }: Props
         dpr={[1, lowPower ? 1.5 : 2]}
         camera={{ position: [0, 0, 6], fov: 45 }}
         gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
-        frameloop={active ? 'always' : 'never'}
+        frameloop={active ? 'always' : 'demand'}
         style={{ pointerEvents: 'none' }}
       >
-        <Cloud word={word} count={count} handle={handle} interactive={!lowPower} />
+        <Cloud
+          shapes={shapes}
+          count={n}
+          fit={fit}
+          handle={handle}
+          interactive={!lowPower}
+          mouseStrength={mouseStrength}
+          lean={lean}
+          spin={spin}
+          style={merged}
+        />
       </Canvas>
     </div>
   )

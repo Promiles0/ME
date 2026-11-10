@@ -13,6 +13,7 @@ export default function Preloader({ onDone }: Props) {
   const [gone, setGone] = useState(false)
 
   useEffect(() => {
+    if (gone) return
     let cancelled = false
     const done = () => {
       if (cancelled) return
@@ -49,7 +50,7 @@ export default function Preloader({ onDone }: Props) {
       cancelled = true
       tl.kill()
     }
-  }, [onDone])
+  }, [onDone, gone])
 
   if (gone) return null
 

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useCallback, useState } from 'react'
 import SmoothScroll from './components/SmoothScroll'
 import Cursor from './components/Cursor'
 import Nav from './components/Nav'
@@ -15,10 +15,11 @@ const Projects = lazy(() => import('./sections/Projects'))
 
 export default function App() {
   const [ready, setReady] = useState(false)
+  const onPreloaderDone = useCallback(() => setReady(true), [])
 
   return (
     <SmoothScroll paused={!ready}>
-      <Preloader onDone={() => setReady(true)} />
+      <Preloader onDone={onPreloaderDone} />
       <Cursor />
       <Nav />
       <main id="content">

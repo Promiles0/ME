@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowUpRight, Lock, X } from 'lucide-react'
+import { ArrowUpRight, X } from 'lucide-react'
 import { GithubIcon } from './icons'
 import type { Project } from '../data/projects'
 import { useLenis } from './SmoothScroll'
@@ -89,14 +89,7 @@ export default function ProjectModal({ project, onClose }: Props) {
             </div>
 
             <div className="p-6 md:p-10">
-              <p className="eyebrow flex items-center gap-3 opacity-70">
-                <span>{project.year}</span>
-                {project.isPrivate && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-ink/10 px-2 py-0.5 normal-case tracking-normal">
-                    <Lock className="h-3 w-3" /> Private repo
-                  </span>
-                )}
-              </p>
+              <p className="eyebrow opacity-70">{project.year}</p>
               <h3 id="project-title" className="display mt-3 text-5xl md:text-7xl">
                 {project.title}
               </h3>
@@ -134,7 +127,7 @@ export default function ProjectModal({ project, onClose }: Props) {
                     <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </a>
                 )}
-                {project.repoUrl ? (
+                {project.repoUrl && (
                   <a
                     href={project.repoUrl}
                     target="_blank"
@@ -143,10 +136,6 @@ export default function ProjectModal({ project, onClose }: Props) {
                   >
                     <GithubIcon className="h-4 w-4" /> Source
                   </a>
-                ) : (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-6 py-3 text-sm font-semibold opacity-60">
-                    <Lock className="h-4 w-4" /> Source is private
-                  </span>
                 )}
               </div>
             </div>

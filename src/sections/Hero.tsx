@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDown, ArrowUpRight } from 'lucide-react'
 import { gsap, ScrollTrigger, useReducedMotion } from '../lib/motion'
 import { profile } from '../data/profile'
 import Magnetic from '../components/Magnetic'
 import type { ParticleFieldHandle } from '../three/ParticleField'
+import { wordShapes } from '../three/shapes'
 
 const ParticleField = lazy(() => import('../three/ParticleField'))
 
@@ -21,6 +22,7 @@ export default function Hero({ ready }: Props) {
   const reduced = useReducedMotion()
   const [active, setActive] = useState(true)
   const [roleIndex, setRoleIndex] = useState(0)
+  const shapes = useMemo(() => wordShapes(profile.shortName.toUpperCase()), [])
 
   // Rotate the role word.
   useEffect(() => {
@@ -86,7 +88,7 @@ export default function Hero({ ready }: Props) {
         {/* Particle cloud */}
         {!reduced && (
           <Suspense fallback={null}>
-            <ParticleField word={profile.shortName.toUpperCase()} handle={field} active={active && ready} className="absolute inset-x-0 top-16 h-[46vh] md:inset-y-0 md:left-[32%] md:h-auto" />
+            <ParticleField shapes={shapes} handle={field} active={active && ready} className="absolute inset-x-0 top-16 h-[42vh] md:inset-y-0 md:left-[32%] md:h-auto" />
           </Suspense>
         )}
         {reduced && (

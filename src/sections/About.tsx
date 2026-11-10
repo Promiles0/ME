@@ -1,44 +1,61 @@
-import { useEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { gsap, ScrollTrigger, useReducedMotion } from '../lib/motion'
 import { education, profile } from '../data/profile'
 import Reveal from '../components/Reveal'
 import SectionHeading from '../components/SectionHeading'
+import type { ParticleFieldHandle } from '../three/ParticleField'
+import { portraitShapes } from '../three/shapes'
+
+const ParticleField = lazy(() => import('../three/ParticleField'))
 
 /**
- * About: portrait with a parallax frame, bio and education.
- * The portrait glides up slower than the page for depth.
+ * About: a portrait made of particles that assembles as the section scrolls
+ * in, plus bio and education. The pointer nudges the particles gently.
  */
 export default function About() {
   const section = useRef<HTMLElement>(null)
-  const photo = useRef<HTMLDivElement>(null)
+  const card = useRef<HTMLDivElement>(null)
+  const field = useRef<ParticleFieldHandle | null>(null)
   const reduced = useReducedMotion()
+  const [active, setActive] = useState(false)
+  const shapes = useMemo(() => portraitShapes('/images/portrait.jpg'), [])
+
+  // Only run the particle loop while the card is on screen.
+  useEffect(() => {
+    const el = card.current
+    if (!el) return
+    const io = new IntersectionObserver(([e]) => setActive(e.isIntersecting), { threshold: 0.05 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
 
   useEffect(() => {
-    if (reduced || !section.current) return
+    if (!section.current) return
+    if (reduced) {
+      // Assembled straight away, no parallax.
+      const id = setTimeout(() => field.current?.setMorph(1), 100)
+      return () => clearTimeout(id)
+    }
     const ctx = gsap.context(() => {
+      // Assemble the face while the card travels up the lower half of the screen.
+      ScrollTrigger.create({
+        trigger: card.current,
+        start: 'top 95%',
+        end: 'center 45%',
+        scrub: 0.6,
+        onUpdate: (self) => field.current?.setMorph(self.progress),
+      })
       gsap.fromTo(
-        photo.current,
-        { yPercent: 8 },
+        card.current,
+        { yPercent: 6 },
         {
-          yPercent: -8,
+          yPercent: -6,
           ease: 'none',
           scrollTrigger: { trigger: section.current, start: 'top bottom', end: 'bottom top', scrub: true },
         },
       )
-      gsap.fromTo(
-        '[data-photo-img]',
-        { scale: 1.18 },
-        {
-          scale: 1,
-          ease: 'none',
-          scrollTrigger: { trigger: photo.current, start: 'top bottom', end: 'center center', scrub: true },
-        },
-      )
     }, section)
-    return () => {
-      ctx.revert()
-      ScrollTrigger.refresh()
-    }
+    return () => ctx.revert()
   }, [reduced])
 
   return (
@@ -48,18 +65,28 @@ export default function About() {
         <SectionHeading index="01" eyebrow="About me" title="Curious," outline="by design" />
 
         <div className="mt-16 grid gap-12 md:mt-24 md:grid-cols-12 md:gap-10">
-          {/* Portrait */}
+          {/* Particle portrait */}
           <div className="md:col-span-5">
-            <div ref={photo} className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-[2rem] bg-sage">
-              <img
-                data-photo-img
-                src="/images/portrait.jpg"
-                alt={`Portrait of ${profile.name}`}
-                className="h-full w-full object-cover object-top"
-                loading="lazy"
-                width={600}
-                height={750}
-              />
+            <div
+              ref={card}
+              className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-[2rem] bg-sage"
+              data-cursor
+            >
+              <Suspense fallback={null}>
+                <ParticleField
+                  shapes={shapes}
+                  handle={field}
+                  active={active && !reduced}
+                  className="absolute inset-0"
+                  fit={0.9}
+                  mouseStrength={0.32}
+                  lean={0.25}
+                  spin={false}
+                  count={{ high: 18000, low: 7000 }}
+                  style={{ colorA: '#1a1a16', colorB: '#5c5f55', colorHot: '#e8d2b5', split: 0.42, size: 2.1, shadeSize: 0.45, drift: 0.02 }}
+                />
+              </Suspense>
+              <p className="sr-only">Portrait of {profile.name}, rendered as particles.</p>
               <div className="pointer-events-none absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-ink/10" />
               <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-full bg-ink/85 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream backdrop-blur">
                 <span>{profile.location}</span>
