@@ -86,7 +86,7 @@ export default function Hero({ ready }: Props) {
         {/* Particle cloud */}
         {!reduced && (
           <Suspense fallback={null}>
-            <ParticleField word={profile.shortName.toUpperCase()} handle={field} active={active && ready} className="absolute inset-0" />
+            <ParticleField word={profile.shortName.toUpperCase()} handle={field} active={active && ready} className="absolute inset-y-0 left-0 right-0 md:left-[26%]" />
           </Suspense>
         )}
         {reduced && (

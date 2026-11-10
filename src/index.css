@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Bebas Neue";
+  src: url("/fonts/BebasNeue-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-Variable.ttf") format("truetype");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
 /* ------------------------------------------------------------------
    Design tokens
    sage  #A5A79B and cream #E8D2B5 come straight from the palette image.
@@ -66,8 +79,8 @@ body {
 
 /* Outlined (hollow) headline variant */
 .display-outline {
-  color: transparent;
-  -webkit-text-stroke: 1px currentColor;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 1.5px currentColor;
 }
 
 /* Diagonal cream stripe motif, used as a decorative background element */

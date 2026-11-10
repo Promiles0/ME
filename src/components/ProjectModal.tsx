@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowUpRight, Github, Lock, X } from 'lucide-react'
+import { ArrowUpRight, Lock, X } from 'lucide-react'
+import { GithubIcon } from './icons'
 import type { Project } from '../data/projects'
 import { useLenis } from './SmoothScroll'
 
@@ -140,7 +141,7 @@ export default function ProjectModal({ project, onClose }: Props) {
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 rounded-full border border-ink/30 px-6 py-3 text-sm font-semibold hover:bg-ink hover:text-cream"
                   >
-                    <Github className="h-4 w-4" /> Source
+                    <GithubIcon className="h-4 w-4" /> Source
                   </a>
                 ) : (
                   <span className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-6 py-3 text-sm font-semibold opacity-60">

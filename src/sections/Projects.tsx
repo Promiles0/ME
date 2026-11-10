@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowUpRight, Github, Lock } from 'lucide-react'
+import { ArrowUpRight, Lock } from 'lucide-react'
+import { GithubIcon } from '../components/icons'
 import { projects as localProjects, type Project } from '../data/projects'
 import { loadProjects } from '../lib/projects'
 import SectionHeading from '../components/SectionHeading'
@@ -147,7 +148,7 @@ export default function Projects() {
                     )}
                     {p.repoUrl && (
                       <span className="inline-flex items-center gap-1 opacity-80">
-                        <Github className="h-3.5 w-3.5" /> Source
+                        <GithubIcon className="h-3.5 w-3.5" /> Source
                       </span>
                     )}
                   </div>

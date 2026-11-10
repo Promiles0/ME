@@ -6,12 +6,14 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
-    // Keep the 3D stack in its own chunk so the first paint is not blocked by it.
+    // Keep the 3D and motion stacks in their own chunks so the first paint is
+    // not blocked by them.
     rollupOptions: {
       output: {
-        manualChunks: {
-          three: ['three', '@react-three/fiber', '@react-three/drei'],
-          motion: ['gsap', 'framer-motion', 'lenis'],
+        manualChunks(id) {
+          if (id.includes('node_modules/three') || id.includes('@react-three')) return 'three'
+          if (id.includes('node_modules/gsap') || id.includes('node_modules/framer-motion') || id.includes('node_modules/lenis')) return 'motion'
+          return undefined
         },
       },
     },

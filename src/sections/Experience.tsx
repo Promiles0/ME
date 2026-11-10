@@ -30,16 +30,21 @@ export default function Experience() {
         gsap.set(line.current, { scaleY: 1 })
       }
 
-      gsap.utils.toArray<HTMLElement>('[data-entry]').forEach((entry) => {
-        ScrollTrigger.create({
-          trigger: entry,
-          start: 'top 60%',
-          end: 'bottom 60%',
-          onToggle: (self) => {
-            if (self.isActive) setYear(entry.dataset.year ?? '')
-            entry.classList.toggle('is-active', self.isActive)
-          },
-        })
+      const entries = gsap.utils.toArray<HTMLElement>('[data-entry]')
+
+      // One trigger decides which entry is "current": the last one whose top
+      // has passed 60% of the viewport. Falls back to the first entry, so the
+      // big year is never stale when nothing is in the active band.
+      const pick = () => {
+        const line = window.innerHeight * 0.6
+        let current = entries[0]
+        for (const el of entries) if (el.getBoundingClientRect().top <= line) current = el
+        entries.forEach((el) => el.classList.toggle('is-active', el === current))
+        setYear(current?.dataset.year ?? experience[0].year)
+      }
+      ScrollTrigger.create({ trigger: section.current, start: 'top bottom', end: 'bottom top', onUpdate: pick, onRefresh: pick })
+
+      entries.forEach((entry) => {
         if (!reduced) {
           gsap.fromTo(
             entry.querySelectorAll('[data-entry-item]'),

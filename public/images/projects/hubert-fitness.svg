@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7f8276"/>
+      <stop offset="1" stop-color="#a5a79b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#g)"/>
+  <path d="M760 -100 L1060 -100 L620 1000 L320 1000 Z" fill="#e8d2b5" opacity="0.35"/>
+  <g font-family="Manrope, Segoe UI, sans-serif" fill="#1a1a16">
+    <text x="90" y="150" font-size="22" font-weight="700" letter-spacing="6" opacity="0.7">GYM &amp; FITNESS CENTER</text>
+    <text x="90" y="400" font-size="150" font-family="Bebas Neue, Impact, sans-serif" letter-spacing="2">HUBERT</text>
+    <text x="90" y="540" font-size="150" font-family="Bebas Neue, Impact, sans-serif" letter-spacing="2" fill="none" stroke="#1a1a16" stroke-width="3">FITNESS FORGE</text>
+    <text x="92" y="610" font-size="30" font-weight="600" opacity="0.8">Programmes, coaching and memberships for a fitness brand.</text>
+  </g>
+  <g transform="translate(90 690)" fill="none" stroke="#1a1a16" stroke-width="4" stroke-linecap="round">
+    <path d="M0 40 h40 M200 40 h40 M40 10 v60 M200 10 v60 M70 20 v40 M170 20 v40 M70 40 h100"/>
+  </g>
+</svg>

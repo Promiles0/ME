@@ -1,0 +1,53 @@
+-- Initial project rows. Mirrors src/data/projects.ts.
+insert into public.projects
+  (slug, title, tagline, summary, highlights, tech_stack, repo_url, demo_url, image_url, video_url, is_private, featured, display_order, year)
+values
+  ('blue-tech', 'Blue-tech', 'Full-stack e-commerce, no separate API server',
+   'A complete retail platform: product discovery, cart and checkout, coupons, payments and an admin console for orders, shipments, users and reviews. The React front end talks to a single Deno edge function that serves the whole REST API on top of Supabase.',
+   array['Atomic checkout: stock and coupon updates use compare-and-swap so they stay correct under concurrent requests.','Admin console with dashboard stats, analytics, order and shipment management and review moderation.','Email, password and Google sign-in, explicit CORS allow-list and shaped API responses so sensitive columns never reach the client.'],
+   array['React','Vite','Tailwind CSS','Supabase','Deno Edge Functions','PostgreSQL'],
+   'https://github.com/Promiles0/Blue-tech', 'https://blue-tech.onrender.com', '/images/projects/blue-tech.jpg', '/videos/blue-tech.mp4', false, true, 1, '2026'),
+
+  ('arovaforex', 'ArovaForex', 'Forecasts, signals and education for traders',
+   'A trading community platform with public and premium forecasts, real-time likes and comments, a signals area for subscribers, a trading calendar and a full admin dashboard for users, content, analytics and notifications.',
+   array['Role-based user and admin dashboards secured with Supabase row level security.','Real-time engagement on forecasts through Supabase Realtime.','Analytics for user growth, forecast activity and engagement with Recharts.'],
+   array['React','Vite','Tailwind CSS','shadcn/ui','Framer Motion','Supabase','Recharts'],
+   null, 'https://arovaforex.vercel.app', '/images/projects/arovaforex.jpg', null, true, false, 2, '2025'),
+
+  ('san-brothers-core', 'San Brothers Core', 'Multi-portal professional services platform',
+   'One codebase serving three portals for visa and permit processing, certified translation with live interpretation, accounting and business consultancy. Clients book, pay and track services in English, Chinese or Kinyarwanda.',
+   array['React 19 with TanStack Router and Start, deployed on Cloudflare Workers.','Stripe payments and Daily.co video for live interpreter sessions.','Custom i18n, React Hook Form with Zod validation and a Radix-based component library.'],
+   array['React 19','TanStack Router','Cloudflare Workers','Tailwind CSS v4','Supabase','Stripe','Daily.co'],
+   null, 'https://sanbrothers.cn.com', '/images/projects/san-brothers.jpg', null, true, false, 3, '2026'),
+
+  ('lifevault', 'LifeVault', 'A private memory vault, organised by moments',
+   'A personal cloud archive that keeps photos, videos, documents, audio and notes grouped around memories such as a birthday or a trip, rather than folders. Lose a device and everything is still there when you sign in from the next one.',
+   array['Library, timeline, favourites, trash with restore and partial-word search across everything.','Cloudflare R2 for file storage with Supabase Storage as fallback, behind a pluggable provider interface.','Supabase Auth and Postgres with row level security; deploys to Vercel as a single app.'],
+   array['Next.js 16','React 19','TypeScript','Tailwind CSS v4','Supabase','Cloudflare R2'],
+   null, null, '/images/projects/lifevault.svg', null, true, false, 4, '2026'),
+
+  ('arova', 'Arova', 'Brand site for the Arova trading community',
+   'The public face of Arova: a fast marketing site with layered hero imagery, section backgrounds and clear calls to action that lead into the ArovaForex platform.',
+   array['Image-led layout with text masks and layered backgrounds.','Built with React, TypeScript and Tailwind on Vite, data on Supabase.'],
+   array['React','TypeScript','Vite','Tailwind CSS','Supabase'],
+   null, 'https://arova.vercel.app', '/images/projects/arova.jpg', null, true, false, 5, '2025'),
+
+  ('hubert-fitness-forge', 'Hubert Fitness Forge', 'Fitness coaching web app',
+   'A coaching and membership site for a fitness brand with programme pages, motion-rich sections and a Supabase-backed data layer.',
+   array['React, TypeScript and shadcn/ui with Framer Motion transitions.','TanStack Query for server state and Supabase for data.'],
+   array['React','TypeScript','Vite','Tailwind CSS','Framer Motion','Supabase'],
+   'https://github.com/Promiles0/hubert-fitness-forge', 'https://hubertfitness.vercel.app', '/images/projects/hubert-fitness.svg', null, false, false, 6, '2025')
+on conflict (slug) do update set
+  title = excluded.title,
+  tagline = excluded.tagline,
+  summary = excluded.summary,
+  highlights = excluded.highlights,
+  tech_stack = excluded.tech_stack,
+  repo_url = excluded.repo_url,
+  demo_url = excluded.demo_url,
+  image_url = excluded.image_url,
+  video_url = excluded.video_url,
+  is_private = excluded.is_private,
+  featured = excluded.featured,
+  display_order = excluded.display_order,
+  year = excluded.year;
