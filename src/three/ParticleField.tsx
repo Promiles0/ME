@@ -14,6 +14,8 @@ import { isLowPowerDevice } from '../lib/motion'
  * portrait (a: scattered, b/c: the face stippled from a photo).
  */
 
+export type Tracker = () => { a?: { x: number; y: number }; c?: { x: number; y: number } } | null
+
 export type ParticleFieldHandle = {
   /** 0 = shape a, 1 = shape b, 2 = shape c. Values in between blend. */
   setMorph: (v: number) => void
@@ -34,6 +36,9 @@ const vertex = /* glsl */ `
   uniform float uPixelRatio;
   uniform float uMode;
   uniform float uKick;
+  uniform vec3 uOffA;
+  uniform vec3 uOffC;
+  uniform float uFloat;
 
   attribute vec3 aPosB;
   attribute vec3 aPosC;
@@ -69,19 +74,20 @@ const vertex = /* glsl */ `
       pc.y -= 0.2;
     }
 
-    vec3 p = mix(position, pb, s1);
-    p = mix(p, pc, s2);
+    // uOffA / uOffC move shape a and shape c so they can follow elements on the page.
+    vec3 p = mix(position + uOffA, pb, s1);
+    p = mix(p, pc + uOffC, s2);
 
-    if (uMode > 0.5) {
-      // Mid-morph burst: particles fly out along a random direction, then settle.
-      vec3 dir = normalize(vec3(sin(aRand * 91.7), cos(aRand * 47.3), sin(aRand * 13.1)) + 0.0001);
-      float burst = sin(s1 * 3.14159) + sin(s2 * 3.14159) + uKick * (2.4 + aRand * 2.6);
-      p += dir * burst * (0.6 + aRand * 0.9);
-    }
+    // Burst: a click kick (any mode), plus mid-morph bursts in hero mode.
+    vec3 dir = normalize(vec3(sin(aRand * 91.7), cos(aRand * 47.3), sin(aRand * 13.1)) + 0.0001);
+    float burst = uKick * (2.4 + aRand * 2.6);
+    if (uMode > 0.5) burst += sin(s1 * 3.14159) + sin(s2 * 3.14159);
+    p += dir * burst * (0.6 + aRand * 0.9);
 
     // Idle drift: slow, organic breathing.
     float t = uTime * 0.6;
-    p += uDrift * vec3(
+    // While in the middle shape (b), grains float far more freely: dust in the air.
+    p += (uDrift + uFloat * s1 * (1.0 - s2)) * vec3(
       sin(t + aRand * 6.2831),
       cos(t * 0.8 + aRand * 3.1),
       sin(t * 0.7 + aRand * 2.0)
@@ -93,11 +99,13 @@ const vertex = /* glsl */ `
     float force = smoothstep(1.4, 0.0, dist) * uMouseStrength;
     p += normalize(d + 0.0001) * force * 0.9;
     vForce = max(force, uMode * s2 * clamp(waveH * 2.2, 0.0, 1.0) * 0.55);
-    vShade = aShade;
+    // Tone: random mix (cream and ink) for the name and dust, photo shading once in the face.
+    float tone = mix(aRand, aShade, s2);
+    vShade = tone;
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
-    float size = uSize * (0.6 + aRand * 0.8) * (1.0 + force * 1.5) * (1.0 - aShade * uShadeSize);
+    float size = uSize * (0.6 + aRand * 0.8) * (1.0 + force * 1.5) * (1.0 - tone * uShadeSize) * (1.0 - 0.35 * uFloat * s1 * (1.0 - s2) / max(uFloat, 0.0001) * step(0.0001, uFloat));
     gl_PointSize = size * uPixelRatio * (6.0 / -mv.z);
   }
 `
@@ -147,9 +155,11 @@ type CloudProps = {
   spin: boolean
   style: Required<ParticleStyle>
   choreography: boolean
+  track?: Tracker
+  floatAmount: number
 }
 
-function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: leanAmount, spin, style, choreography }: CloudProps) {
+function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: leanAmount, spin, style, choreography, track, floatAmount }: CloudProps) {
   const points = useRef<THREE.Points>(null)
   const { viewport, size, gl, invalidate } = useThree()
   const mouse = useRef(new THREE.Vector3(999, 999, 0))
@@ -208,9 +218,12 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
           uSplit: { value: style.split },
           uMode: { value: choreography ? 1 : 0 },
           uKick: { value: 0 },
+          uOffA: { value: new THREE.Vector3() },
+          uOffC: { value: new THREE.Vector3() },
+          uFloat: { value: floatAmount },
         },
       }),
-    [interactive, mouseStrength, style, choreography],
+    [interactive, mouseStrength, style, choreography, floatAmount],
   )
 
   useEffect(() => {
@@ -266,6 +279,14 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
     // Kick rises fast and settles slowly, so the burst feels like an explosion then a regroup.
     kick.current *= Math.pow(0.4, delta)
     u.uKick.value += (kick.current - u.uKick.value) * Math.min(1, delta * 14)
+    // Follow page elements: convert their screen centres (px) into world offsets.
+    if (track) {
+      const t = track()
+      const toWorld = (pt: { x: number; y: number }, out: THREE.Vector3) =>
+        out.set((pt.x / size.width - 0.5) * viewport.width, -(pt.y / size.height - 0.5) * viewport.height, 0)
+      if (t?.a) toWorld(t.a, u.uOffA.value as THREE.Vector3)
+      if (t?.c) toWorld(t.c, u.uOffC.value as THREE.Vector3)
+    }
     mouse.current.lerp(target.current, Math.min(1, delta * 9))
     ;(u.uMouse.value as THREE.Vector3).copy(mouse.current)
 
@@ -301,6 +322,10 @@ type Props = {
   style?: ParticleStyle
   /** Hero-only motion: swirling galaxy, rolling waves and a burst between shapes. */
   choreography?: boolean
+  /** Called every frame: screen-pixel centres that shape a and shape c should sit on. */
+  track?: Tracker
+  /** Extra floating while in shape b (0 = none). */
+  float?: number
 }
 
 const defaultStyle: Required<ParticleStyle> = {
@@ -325,6 +350,8 @@ export default function ParticleField({
   count = { high: 22000, low: 9000 },
   style,
   choreography = false,
+  track,
+  float = 0,
 }: Props) {
   const lowPower = useMemo(isLowPowerDevice, [])
   const n = lowPower ? count.low : count.high
@@ -350,6 +377,8 @@ export default function ParticleField({
           spin={spin}
           style={merged}
           choreography={choreography}
+          track={track}
+          floatAmount={float}
         />
       </Canvas>
     </div>

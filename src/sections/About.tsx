@@ -1,52 +1,25 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { gsap, ScrollTrigger, useReducedMotion } from '../lib/motion'
+import { useEffect, useRef } from 'react'
+import { gsap, useReducedMotion } from '../lib/motion'
 import { education, profile } from '../data/profile'
 import Reveal from '../components/Reveal'
 import SectionHeading from '../components/SectionHeading'
 import Stats from '../components/Stats'
 import ScrubText from '../components/ScrubText'
-import type { ParticleFieldHandle } from '../three/ParticleField'
-import { portraitShapes } from '../three/shapes'
-
-const ParticleField = lazy(() => import('../three/ParticleField'))
 
 /**
- * About: a portrait made of particles that assembles as the section scrolls
- * in, plus bio and education. The pointer nudges the particles gently.
+ * About: bio, education and numbers. The portrait card is empty on purpose:
+ * the shared story grains (components/StoryParticles) fall from the hero and
+ * settle on it as the face. Reduced motion shows a toned photo instead.
  */
 export default function About() {
   const section = useRef<HTMLElement>(null)
   const card = useRef<HTMLDivElement>(null)
-  const field = useRef<ParticleFieldHandle | null>(null)
   const reduced = useReducedMotion()
-  const [active, setActive] = useState(false)
-  const shapes = useMemo(() => portraitShapes('/images/portrait.jpg', 1 / 2.22, 1 / 2.4), [])
-
-  // Only run the particle loop while the card is on screen.
-  useEffect(() => {
-    const el = card.current
-    if (!el) return
-    const io = new IntersectionObserver(([e]) => setActive(e.isIntersecting), { threshold: 0.05 })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
 
   useEffect(() => {
     if (!section.current) return
-    if (reduced) {
-      // Assembled straight away, no parallax.
-      const id = setTimeout(() => field.current?.setMorph(1), 100)
-      return () => clearTimeout(id)
-    }
+    if (reduced) return
     const ctx = gsap.context(() => {
-      // Assemble the face while the card travels up the lower half of the screen.
-      ScrollTrigger.create({
-        trigger: card.current,
-        start: 'top 110%',
-        end: 'center 50%',
-        scrub: 0.6,
-        onUpdate: (self) => field.current?.setMorph(self.progress),
-      })
       gsap.fromTo(
         card.current,
         { yPercent: 6 },
@@ -69,35 +42,22 @@ export default function About() {
         <div className="mt-16 grid gap-12 md:mt-24 md:grid-cols-12 md:gap-10">
           {/* Particle portrait */}
           <div className="md:col-span-5">
-            {/* Wrapper: the card, plus a particle canvas that reaches up above it so the
-                hero's grains can be seen arriving and pouring into the face. */}
-            <div className="relative mx-auto w-full max-w-md">
-              <Suspense fallback={null}>
-                <ParticleField
-                  shapes={shapes}
-                  handle={field}
-                  active={active && !reduced}
-                  className="pointer-events-none absolute bottom-0 left-1/2 z-[2] h-[222%] w-[240%] -translate-x-1/2"
-                  fit={0.9}
-                  mouseStrength={0.32}
-                  lean={0.15}
-                  spin={false}
-                  count={{ high: 18000, low: 7000 }}
-                  style={{ colorA: '#1a1a16', colorB: '#e8d2b5', colorHot: '#fff4e3', split: 0.46, size: 2.2, shadeSize: 0.35, drift: 0.03 }}
-                />
-              </Suspense>
             <div
               ref={card}
+              data-portrait-card
               className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-[2rem] bg-sage"
               data-cursor="Touch"
             >
-              <p className="sr-only">Portrait of {profile.name}, rendered as particles.</p>
+              {reduced ? (
+                <img src="/images/portrait.jpg" alt={`Portrait of ${profile.name}`} className="h-full w-full object-cover object-top mix-blend-multiply grayscale" />
+              ) : (
+                <p className="sr-only">Portrait of {profile.name}, drawn by the particles from the hero.</p>
+              )}
               <div className="pointer-events-none absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-ink/10" />
               <div className="absolute bottom-4 left-4 right-4 z-[3] flex items-center justify-between rounded-full bg-ink/85 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream backdrop-blur">
                 <span>{profile.location}</span>
                 <span>{profile.languages.join(' · ')}</span>
               </div>
-            </div>
             </div>
           </div>
 

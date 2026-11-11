@@ -15,6 +15,7 @@ import Companion from './components/Companion'
 import CommandPalette from './components/CommandPalette'
 import ParticleStream from './components/ParticleStream'
 import LiveCursors from './components/LiveCursors'
+import StoryParticles from './components/StoryParticles'
 
 // Projects pulls in the device mockup and modal; keep it out of the first chunk.
 const Projects = lazy(() => import('./sections/Projects'))
@@ -34,6 +35,8 @@ export default function App() {
       <SectionTransitions />
       {ready && <Companion />}
       <CommandPalette />
+      {/* One set of grains: name in the hero -> dust -> face in About */}
+      <StoryParticles ready={ready} />
       {ready && <ParticleStream />}
       {ready && <LiveCursors />}
       {/* main sits above the fixed footer and leaves room for it: the curtain */}

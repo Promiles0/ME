@@ -49,3 +49,38 @@ export function portraitShapes(src: string, cardFrac = 0.45, cardFracW = 1): Sha
     return { a, b: positions, c: positions, shade }
   }
 }
+
+/**
+ * The whole story with one set of grains:
+ *   a: the name, sized to the hero's name slot
+ *   b: dust floating across the whole screen
+ *   c: the face, sized to the About portrait card
+ * Shapes a and c are built around (0,0); the field's `track` moves them onto
+ * the slot and the card every frame. Every grain carries its pixel tone from
+ * the photo, so the name and the dust already have the face's colours.
+ */
+export function storyShapes(word: string, src: string): ShapeBuilder {
+  return async (count, _worldWidth, view) => {
+    const pxToWorld = view.w / window.innerWidth
+    const slot = document.querySelector('[data-name-slot]')?.getBoundingClientRect()
+    const card = document.querySelector('[data-portrait-card]')?.getBoundingClientRect()
+    const nameW = (slot?.width ?? window.innerWidth * 0.8) * pxToWorld
+    const faceW = (card?.width ?? 400) * pxToWorld * 0.88
+
+    const load = document.fonts?.load('400 200px "Bebas Neue"').catch(() => undefined) ?? Promise.resolve()
+    await Promise.race([load, new Promise((r) => setTimeout(r, 1500))])
+
+    const a = textPoints(word, count, nameW)
+    const face = await imagePoints(src, count, faceW, { gamma: 1.8, cutoff: 0.8, depth: 0.6 })
+
+    const b = new Float32Array(count * 3)
+    for (let i = 0; i < count; i++) {
+      // A soft drifting cloud: dense in the middle, thinning out towards the edges.
+      const bell = () => Math.random() + Math.random() + Math.random() - 1.5
+      b[i * 3] = bell() * view.w * 0.55
+      b[i * 3 + 1] = bell() * view.h * 0.5
+      b[i * 3 + 2] = bell() * 3
+    }
+    return { a, b, c: face.positions, shade: face.shade }
+  }
+}
