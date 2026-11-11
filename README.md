@@ -113,7 +113,7 @@ cd worker && npx wrangler d1 execute aroi-me --remote --file=seed.sql
 
 ```bash
 cd worker
-npx wrangler d1 execute aroi-me --remote --command "SELECT created_at, name, email, message FROM contact_messages ORDER BY id DESC LIMIT 20"
+npm run messages
 ```
 
 ## Deploy
