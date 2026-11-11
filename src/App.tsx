@@ -14,6 +14,7 @@ import SectionTransitions from './components/SectionTransitions'
 import Companion from './components/Companion'
 import CommandPalette from './components/CommandPalette'
 import ParticleStream from './components/ParticleStream'
+import LiveCursors from './components/LiveCursors'
 
 // Projects pulls in the device mockup and modal; keep it out of the first chunk.
 const Projects = lazy(() => import('./sections/Projects'))
@@ -34,6 +35,7 @@ export default function App() {
       {ready && <Companion />}
       <CommandPalette />
       {ready && <ParticleStream />}
+      {ready && <LiveCursors />}
       {/* main sits above the fixed footer and leaves room for it: the curtain */}
       <main id="content" className="relative z-10 bg-sage shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]" style={{ marginBottom: footerH }}>
         <Hero ready={ready} />

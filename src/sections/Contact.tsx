@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useCallback, useRef, useState, type FormEvent } from 'react'
 import { ArrowUpRight, Check, Loader2 } from 'lucide-react'
 import { profile } from '../data/profile'
-import { hasSupabase, supabase } from '../lib/supabase'
+import { apiFetch, hasApi, TURNSTILE_SITE_KEY } from '../lib/api'
+import Turnstile, { type TurnstileHandle } from '../components/Turnstile'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
 import Scramble from '../components/Scramble'
@@ -10,12 +11,16 @@ type Status = 'idle' | 'sending' | 'sent' | 'error'
 
 /**
  * Contact: bold call to action, a form and social links.
- * With Supabase configured the form inserts into contact_messages.
- * Without it, the form opens a prefilled email so it still works on day one.
+ * With the Worker configured (VITE_API_URL) the form posts to /contact, which
+ * stores the message in D1 after a Turnstile check. Without it, or if the
+ * Worker is unreachable, the form opens a prefilled email instead.
  */
 export default function Contact() {
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState('')
+  const [token, setToken] = useState('')
+  const turnstile = useRef<TurnstileHandle>(null)
+  const onToken = useCallback((t: string) => setToken(t), [])
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -27,23 +32,42 @@ export default function Contact() {
     const honey = String(data.get('company') ?? '')
     if (honey) return // bot filled the hidden field
 
-    if (!hasSupabase || !supabase) {
+    const mailto = () => {
       const subject = encodeURIComponent(`Portfolio enquiry from ${name}`)
       const body = encodeURIComponent(`${message}\n\n— ${name} (${email})`)
       window.location.href = `mailto:${profile.email}?subject=${subject}&body=${body}`
+    }
+    if (!hasApi) return mailto()
+
+    if (TURNSTILE_SITE_KEY && !token) {
+      setStatus('error')
+      setError('One moment, checking you are human. Try again in a second.')
       return
     }
 
     setStatus('sending')
     setError('')
-    const { error: err } = await supabase.from('contact_messages').insert({ name, email, message })
-    if (err) {
-      setStatus('error')
-      setError('Something went wrong. Email me directly instead.')
-      return
+    try {
+      const res = await apiFetch(
+        '/contact',
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, message, turnstileToken: token }) },
+        10000,
+      )
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        setStatus('error')
+        setError(data.error ?? 'Something went wrong. Email me directly instead.')
+        turnstile.current?.reset()
+        return
+      }
+      setStatus('sent')
+      form.reset()
+      turnstile.current?.reset()
+    } catch {
+      // Worker unreachable: fall back to email so the message is never lost.
+      setStatus('idle')
+      mailto()
     }
-    setStatus('sent')
-    form.reset()
   }
 
   const field =
@@ -142,6 +166,8 @@ export default function Contact() {
                 </div>
               </div>
 
+              {hasApi && <Turnstile ref={turnstile} onToken={onToken} />}
+
               <button
                 type="submit"
                 disabled={status === 'sending' || status === 'sent'}
@@ -149,10 +175,10 @@ export default function Contact() {
               >
                 {status === 'sending' && <Loader2 className="h-4 w-4 animate-spin" />}
                 {status === 'sent' && <Check className="h-4 w-4" />}
-                {status === 'sent' ? 'Message sent' : status === 'sending' ? 'Sending' : hasSupabase ? 'Send message' : 'Send via email'}
+                {status === 'sent' ? 'Message sent' : status === 'sending' ? 'Sending' : hasApi ? 'Send message' : 'Send via email'}
               </button>
               <p className="mt-3 text-xs opacity-60" role="status" aria-live="polite">
-                {status === 'error' ? error : hasSupabase ? 'Stored securely. I never share your details.' : 'Opens your email app with the message prefilled.'}
+                {status === 'error' ? error : hasApi ? 'Protected by Cloudflare Turnstile. I never share your details.' : 'Opens your email app with the message prefilled.'}
               </p>
             </form>
           </Reveal>

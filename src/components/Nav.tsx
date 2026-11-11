@@ -4,6 +4,7 @@ import { profile } from '../data/profile'
 import { useLenis } from './SmoothScroll'
 import Scramble from './Scramble'
 import { openPalette } from './CommandPalette'
+import { PresenceCount } from './LiveCursors'
 
 const links = [
   { href: '#about', label: 'About' },
@@ -124,6 +125,7 @@ export default function Nav() {
           </ul>
 
           <div className="flex items-center gap-4">
+            <PresenceCount dark={dark && !open} />
             <button
               type="button"
               onClick={openPalette}

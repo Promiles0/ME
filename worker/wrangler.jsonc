@@ -1,0 +1,30 @@
+// Portfolio API: projects (D1), contact messages (D1 + Turnstile), live presence (Durable Object).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aroi-me-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "aroi-me",
+      // Filled in by `wrangler d1 create aroi-me`
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "name": "PRESENCE", "class_name": "PresenceRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PresenceRoom"] }],
+
+  "vars": {
+    // Comma-separated list of origins allowed to call the API.
+    "ALLOWED_ORIGINS": "https://aroi-me.onrender.com,http://localhost:5173,http://127.0.0.1:5173"
+  }
+  // Secret (not in this file): TURNSTILE_SECRET — set with `wrangler secret put TURNSTILE_SECRET`.
+  // Locally it lives in .dev.vars.
+}
