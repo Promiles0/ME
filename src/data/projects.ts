@@ -1,10 +1,10 @@
 /**
  * Project data.
  *
- * This file mirrors the `projects` table described in
- * supabase/migrations/0001_init.sql. Until the Supabase project exists the site
- * reads from here; once VITE_SUPABASE_URL is set, src/lib/projects.ts fetches
- * the table first and falls back to this list.
+ * This file is the source of truth for the D1 `projects` table
+ * (worker/migrations/0001_init.sql). Run `node scripts/gen-seed.mjs` after
+ * editing it. When VITE_API_URL is set, src/lib/projects.ts fetches the table
+ * first and falls back to this list.
  */
 export type Project = {
   slug: string

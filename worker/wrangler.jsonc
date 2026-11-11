@@ -11,7 +11,7 @@
       "binding": "DB",
       "database_name": "aroi-me",
       // Filled in by `wrangler d1 create aroi-me`
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "93dfc937-67af-42f7-8a63-08453943c651",
       "migrations_dir": "migrations"
     }
   ],
