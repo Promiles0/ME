@@ -1,13 +1,15 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { gsap } from '../lib/motion'
 
 /**
- * A small cream dot that follows the pointer and grows over interactive
- * elements. Uses mix-blend-mode: difference so it stays visible on every
- * surface. Hidden on touch devices and under reduced motion.
+ * A cream dot that follows the pointer. Over plain links and buttons it grows
+ * (blend mode difference, so it reads on every surface). Over anything with a
+ * `data-cursor="Label"` attribute it becomes a solid cream disc that says what
+ * will happen: Tilt, Open, Visit, Touch. Hidden on touch and reduced motion.
  */
 export default function Cursor() {
   const dot = useRef<HTMLDivElement>(null)
+  const [label, setLabel] = useState('')
 
   useEffect(() => {
     const el = dot.current
@@ -25,8 +27,12 @@ export default function Cursor() {
     }
     const over = (e: PointerEvent) => {
       const t = e.target as HTMLElement | null
+      const labelled = t?.closest<HTMLElement>('[data-cursor]:not([data-cursor=""])')
       const interactive = t?.closest('a, button, [data-cursor]')
-      el.classList.toggle('is-hover', Boolean(interactive))
+      const text = labelled?.dataset.cursor ?? ''
+      setLabel(text)
+      el.classList.toggle('has-label', Boolean(text))
+      el.classList.toggle('is-hover', Boolean(interactive) && !text)
     }
     const leave = () => (el.style.opacity = '0')
 
@@ -40,5 +46,9 @@ export default function Cursor() {
     }
   }, [])
 
-  return <div ref={dot} className="cursor-dot" style={{ opacity: 0 }} aria-hidden />
+  return (
+    <div ref={dot} className="cursor-dot" style={{ opacity: 0 }} aria-hidden>
+      <span className="cursor-label">{label}</span>
+    </div>
+  )
 }

@@ -4,6 +4,7 @@ import { education, profile } from '../data/profile'
 import Reveal from '../components/Reveal'
 import SectionHeading from '../components/SectionHeading'
 import Stats from '../components/Stats'
+import ScrubText from '../components/ScrubText'
 import type { ParticleFieldHandle } from '../three/ParticleField'
 import { portraitShapes } from '../three/shapes'
 
@@ -71,7 +72,7 @@ export default function About() {
             <div
               ref={card}
               className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-[2rem] bg-sage"
-              data-cursor
+              data-cursor="Touch"
             >
               <Suspense fallback={null}>
                 <ParticleField
@@ -98,13 +99,7 @@ export default function About() {
 
           {/* Bio + education */}
           <div className="md:col-span-7 md:pl-6 lg:pl-16">
-            <div className="space-y-5 text-lg leading-relaxed md:text-xl">
-              {profile.bio.map((p, i) => (
-                <Reveal key={i} as="p" delay={i * 0.08}>
-                  {p}
-                </Reveal>
-              ))}
-            </div>
+            <ScrubText paragraphs={profile.bio} className="space-y-5 text-xl font-medium leading-relaxed md:text-2xl md:leading-snug" />
 
             <Reveal className="mt-14" delay={0.1}>
               <p className="eyebrow mb-6 opacity-70">Education</p>

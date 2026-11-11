@@ -28,6 +28,7 @@ function Actions({ p, onOpen }: ActionsProps) {
       <Magnetic>
         <button
           type="button"
+          data-cursor="Open"
           onClick={() => onOpen(p)}
           className="rounded-full bg-cream px-6 py-3 text-sm font-semibold text-ink transition-transform hover:scale-[1.03]"
         >
@@ -40,6 +41,7 @@ function Actions({ p, onOpen }: ActionsProps) {
             href={p.demoUrl}
             target="_blank"
             rel="noreferrer"
+            data-cursor="Visit"
             className="group inline-flex items-center gap-2 rounded-full border border-cream/30 px-6 py-3 text-sm font-semibold hover:bg-cream hover:text-ink"
           >
             Live demo

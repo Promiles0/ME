@@ -75,7 +75,7 @@ export default function DeviceMockup({ video, poster, image, alt, onVideo }: Pro
   }
 
   return (
-    <div ref={frame} className="relative [perspective:1600px]" onPointerMove={onMove} onPointerLeave={onLeave} data-cursor>
+    <div ref={frame} className="relative [perspective:1600px]" onPointerMove={onMove} onPointerLeave={onLeave} data-cursor="Tilt">
       <div className="pointer-events-none absolute inset-[-10%] -z-10 rounded-full bg-cream/20 blur-3xl" aria-hidden />
 
       <div ref={inner} className="relative [transform-style:preserve-3d] will-change-transform" style={{ transform: 'rotateY(-10deg) rotateX(6deg)' }}>

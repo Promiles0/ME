@@ -9,6 +9,8 @@ import Experience from './sections/Experience'
 import Skills from './sections/Skills'
 import Contact from './sections/Contact'
 import Footer from './components/Footer'
+import StoryRail from './components/StoryRail'
+import SectionTransitions from './components/SectionTransitions'
 
 // Projects pulls in the device mockup and modal; keep it out of the first chunk.
 const Projects = lazy(() => import('./sections/Projects'))
@@ -22,6 +24,8 @@ export default function App() {
       <Preloader onDone={onPreloaderDone} />
       <Cursor />
       <Nav />
+      <StoryRail />
+      <SectionTransitions />
       <main id="content">
         <Hero ready={ready} />
         <About />

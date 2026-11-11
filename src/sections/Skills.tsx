@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { skills } from '../data/profile'
 import SectionHeading from '../components/SectionHeading'
+import VelocityMarquee from '../components/VelocityMarquee'
 import Reveal from '../components/Reveal'
 import { useReducedMotion } from '../lib/motion'
 
@@ -21,17 +22,8 @@ export default function Skills() {
         <SectionHeading index="03" eyebrow="Skills & tools" title="What I" outline="work with" />
       </div>
 
-      {/* Marquee */}
-      <div className="marquee relative mt-16 border-y border-cream/15 py-5 md:mt-24" aria-hidden>
-        <div className="marquee-track flex w-max gap-10 whitespace-nowrap font-display text-[clamp(2.4rem,6vw,5rem)] leading-none">
-          {[...marqueeWords, ...marqueeWords].map((w, i) => (
-            <span key={i} className={`flex items-center gap-10 ${i % 2 ? 'display-outline' : ''}`}>
-              {w}
-              <span className="h-2 w-2 rounded-full bg-sage" />
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* Marquee that reacts to scroll speed and direction */}
+      <VelocityMarquee words={marqueeWords} />
 
       <div className="relative mx-auto mt-16 grid max-w-[88rem] gap-12 px-6 md:mt-24 md:grid-cols-2 md:px-10 lg:gap-x-20">
         {skills.map((group, gi) => (
