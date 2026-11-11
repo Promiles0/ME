@@ -22,7 +22,7 @@ const CHAPTERS: Chapter[] = [
   { id: 'experience', dark: false, radius: '32%', tip: 'Keep scrolling. The year on the left rolls with you.' },
   { id: 'skills', dark: true, radius: '50% 50% 22% 22%', tip: 'Scroll fast and watch the strip lean in.' },
   { id: 'projects', dark: true, radius: '22%', tip: 'Scroll slowly here. You are driving the demo video.' },
-  { id: 'contact', dark: false, radius: '50% 50% 50% 12%', tip: 'Say hi. Aroi replies within a day.' },
+  { id: 'contact', dark: false, radius: '50% 50% 50% 12%', tip: 'Say hi. Tip: press Ctrl + K to jump anywhere.' },
 ]
 
 export default function Companion() {

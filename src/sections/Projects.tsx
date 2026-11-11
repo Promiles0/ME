@@ -98,6 +98,17 @@ export default function Projects() {
   }, [])
 
   const close = useCallback(() => setOpen(null), [])
+
+  // The command palette asks for a project by slug.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const slug = (e as CustomEvent<string>).detail
+      const p = list.find((x) => x.slug === slug)
+      if (p) setOpen(p)
+    }
+    window.addEventListener('open-project', onOpen)
+    return () => window.removeEventListener('open-project', onOpen)
+  }, [list])
   const onVideo = useCallback((v: HTMLVideoElement | null) => {
     video.current = v
   }, [])
@@ -216,7 +227,7 @@ export default function Projects() {
               aria-label={p.title}
             >
               <Reveal className={`md:col-span-7 ${i % 2 ? 'md:order-1' : 'md:order-2'}`}>
-                <DeviceMockup video={p.video} poster={p.image} image={p.image} alt={`${p.title} preview`} />
+                <DeviceMockup video={p.video} poster={p.image} image={p.image} alt={`${p.title} preview`} liveUrl={p.embeddable && p.demoUrl && !reduced ? p.demoUrl : undefined} />
               </Reveal>
               <div className={`md:col-span-5 ${i % 2 ? 'md:order-2 md:pl-6' : 'md:order-1'}`} data-scramble>
                 <Reveal>

@@ -18,6 +18,8 @@ export type Project = {
   image: string
   video?: string
   isPrivate: boolean
+  /** The live demo allows iframe embedding, so the laptop can boot it on hover. */
+  embeddable?: boolean
   featured: boolean
   order: number
   year: string
@@ -47,6 +49,7 @@ export const projects: Project[] = [
   },
   {
     slug: 'arovaforex',
+    embeddable: true,
     title: 'ArovaForex',
     tagline: 'Forecasts, signals and education for traders',
     summary:
@@ -107,6 +110,7 @@ export const projects: Project[] = [
   },
   {
     slug: 'arova',
+    embeddable: true,
     title: 'Arova',
     tagline: 'Brand site for the Arova trading community',
     summary:

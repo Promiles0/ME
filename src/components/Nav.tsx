@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { profile } from '../data/profile'
 import { useLenis } from './SmoothScroll'
 import Scramble from './Scramble'
+import { openPalette } from './CommandPalette'
 
 const links = [
   { href: '#about', label: 'About' },
@@ -123,6 +124,17 @@ export default function Nav() {
           </ul>
 
           <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={openPalette}
+              data-cursor="Search"
+              className={`hidden items-center gap-2 rounded-full border px-3 py-2 text-[12px] font-semibold transition-colors lg:flex ${
+                dark ? 'border-cream/20 hover:bg-cream hover:text-ink' : 'border-ink/15 hover:bg-ink hover:text-cream'
+              }`}
+            >
+              Search
+              <kbd className="rounded border border-current px-1 text-[10px] opacity-60">Ctrl K</kbd>
+            </button>
             <p className="hidden text-right text-[11px] leading-tight md:block">
               <span className="eyebrow block opacity-60">Kigali</span>
               <span className="font-semibold tabular-nums" aria-live="off">{time}</span>
