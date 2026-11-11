@@ -19,11 +19,13 @@ export default function StoryRail() {
   const lenis = useLenis()
   const [active, setActive] = useState(-1)
   const [progress, setProgress] = useState(0)
+  const [away, setAway] = useState(false)
 
   useEffect(() => {
     const onScroll = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight
       setProgress(max > 0 ? window.scrollY / max : 0)
+      setAway(window.scrollY > max - 260)
       const mid = window.innerHeight * 0.45
       let current = -1
       CHAPTERS.forEach((c, i) => {
@@ -52,7 +54,7 @@ export default function StoryRail() {
     <nav
       aria-label="Chapters"
       className={`fixed right-4 top-1/2 z-40 hidden -translate-y-1/2 text-cream mix-blend-difference transition-opacity duration-700 lg:block ${
-        active >= 0 ? 'opacity-100' : 'pointer-events-none opacity-0'
+        active >= 0 && !away ? 'opacity-100' : 'pointer-events-none opacity-0'
       }`}
     >
       <div className="relative flex flex-col items-end gap-5 pr-4">

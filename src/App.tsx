@@ -11,6 +11,7 @@ import Contact from './sections/Contact'
 import Footer from './components/Footer'
 import StoryRail from './components/StoryRail'
 import SectionTransitions from './components/SectionTransitions'
+import Companion from './components/Companion'
 
 // Projects pulls in the device mockup and modal; keep it out of the first chunk.
 const Projects = lazy(() => import('./sections/Projects'))
@@ -18,6 +19,8 @@ const Projects = lazy(() => import('./sections/Projects'))
 export default function App() {
   const [ready, setReady] = useState(false)
   const onPreloaderDone = useCallback(() => setReady(true), [])
+  const [footerH, setFooterH] = useState(0)
+  const onFooterHeight = useCallback((h: number) => setFooterH(h), [])
 
   return (
     <SmoothScroll paused={!ready}>
@@ -26,7 +29,9 @@ export default function App() {
       <Nav />
       <StoryRail />
       <SectionTransitions />
-      <main id="content">
+      {ready && <Companion />}
+      {/* main sits above the fixed footer and leaves room for it: the curtain */}
+      <main id="content" className="relative z-10 bg-sage shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]" style={{ marginBottom: footerH }}>
         <Hero ready={ready} />
         <About />
         <Experience />
@@ -36,7 +41,7 @@ export default function App() {
         </Suspense>
         <Contact />
       </main>
-      <Footer />
+      <Footer onHeight={onFooterHeight} />
     </SmoothScroll>
   )
 }
