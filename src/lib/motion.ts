@@ -31,6 +31,19 @@ export function isLowPowerDevice(): boolean {
   return coarse || cores <= 4
 }
 
+/** React to a CSS media query. */
+export function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => (typeof window !== 'undefined' ? window.matchMedia(query).matches : false))
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const onChange = () => setMatches(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [query])
+  return matches
+}
+
 export function useIsCoarsePointer(): boolean {
   const [coarse, setCoarse] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(pointer: coarse)').matches : false,

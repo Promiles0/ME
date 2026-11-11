@@ -3,6 +3,7 @@ import { gsap, ScrollTrigger, useReducedMotion } from '../lib/motion'
 import { education, profile } from '../data/profile'
 import Reveal from '../components/Reveal'
 import SectionHeading from '../components/SectionHeading'
+import Stats from '../components/Stats'
 import type { ParticleFieldHandle } from '../three/ParticleField'
 import { portraitShapes } from '../three/shapes'
 
@@ -123,6 +124,10 @@ export default function About() {
             </Reveal>
           </div>
         </div>
+
+        <Reveal className="mt-24 md:mt-32">
+          <Stats />
+        </Reveal>
       </div>
     </section>
   )

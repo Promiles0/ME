@@ -4,6 +4,7 @@ import { profile } from '../data/profile'
 import { hasSupabase, supabase } from '../lib/supabase'
 import Reveal from '../components/Reveal'
 import Magnetic from '../components/Magnetic'
+import Scramble from '../components/Scramble'
 
 type Status = 'idle' | 'sending' | 'sent' | 'error'
 
@@ -101,7 +102,7 @@ export default function Contact() {
                       className="group relative inline-flex items-center gap-1.5 text-base font-semibold"
                     >
                       <span className="relative">
-                        {s.label}
+                        <Scramble text={s.label} />
                         <span className="absolute -bottom-0.5 left-0 h-[2px] w-full origin-right scale-x-0 bg-ink transition-transform duration-500 [transition-timing-function:cubic-bezier(.16,1,.3,1)] group-hover:origin-left group-hover:scale-x-100" />
                       </span>
                       <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />

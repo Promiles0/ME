@@ -6,20 +6,27 @@ type Props = {
   poster?: string
   image: string
   alt: string
+  /** When set, the video is not autoplayed; the parent drives it. */
+  onVideo?: (video: HTMLVideoElement | null) => void
 }
 
 /**
  * A laptop-style device rendered with CSS 3D. It tilts toward the pointer and
  * drifts gently when idle. The screen plays the project's demo video when one
- * is available and visible; otherwise it shows the screenshot and slowly pans
- * down it, as if someone were scrolling the page.
+ * is available and visible (or hands it to the parent via `onVideo` so scroll
+ * can drive it); otherwise it shows the screenshot and slowly pans down it.
  */
-export default function DeviceMockup({ video, poster, image, alt }: Props) {
+export default function DeviceMockup({ video, poster, image, alt, onVideo }: Props) {
   const frame = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
   const vid = useRef<HTMLVideoElement>(null)
   const img = useRef<HTMLImageElement>(null)
   const reduced = useReducedMotion()
+
+  useEffect(() => {
+    onVideo?.(vid.current)
+    return () => onVideo?.(null)
+  }, [onVideo])
 
   // Idle float, screenshot pan, and autoplay only when visible.
   useEffect(() => {
@@ -42,7 +49,7 @@ export default function DeviceMockup({ video, poster, image, alt }: Props) {
     const io = new IntersectionObserver(
       ([e]) => {
         tweens.forEach((t) => (e.isIntersecting ? t.play() : t.pause()))
-        if (!v) return
+        if (!v || onVideo) return
         if (e.isIntersecting && !reduced) v.play().catch(() => undefined)
         else v.pause()
       },
@@ -53,7 +60,7 @@ export default function DeviceMockup({ video, poster, image, alt }: Props) {
       tweens.forEach((t) => t.kill())
       io.disconnect()
     }
-  }, [reduced, video])
+  }, [reduced, video, onVideo])
 
   const onMove = (e: PointerEvent<HTMLDivElement>) => {
     if (reduced || e.pointerType !== 'mouse' || !frame.current || !inner.current) return
@@ -69,11 +76,9 @@ export default function DeviceMockup({ video, poster, image, alt }: Props) {
 
   return (
     <div ref={frame} className="relative [perspective:1600px]" onPointerMove={onMove} onPointerLeave={onLeave} data-cursor>
-      {/* Glow */}
       <div className="pointer-events-none absolute inset-[-10%] -z-10 rounded-full bg-cream/20 blur-3xl" aria-hidden />
 
       <div ref={inner} className="relative [transform-style:preserve-3d] will-change-transform" style={{ transform: 'rotateY(-10deg) rotateX(6deg)' }}>
-        {/* Lid / screen */}
         <div className="relative rounded-[1.1rem] border border-cream/20 bg-ink-soft p-[6px] shadow-[0_40px_80px_-30px_rgba(0,0,0,0.6)] md:rounded-[1.4rem] md:p-2">
           <div className="relative aspect-video overflow-hidden rounded-[0.7rem] bg-ink md:rounded-[0.9rem]">
             {video ? (
@@ -83,25 +88,18 @@ export default function DeviceMockup({ video, poster, image, alt }: Props) {
                 src={video}
                 poster={poster ?? image}
                 muted
-                loop
+                loop={!onVideo}
                 playsInline
-                preload="metadata"
+                preload={onVideo ? 'auto' : 'metadata'}
                 aria-label={alt}
               />
             ) : (
               <img ref={img} src={image} alt={alt} className="h-full w-full object-cover" style={{ objectPosition: '50% 0%' }} loading="lazy" />
             )}
-            {/* Screen sheen */}
-            <div
-              className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent mix-blend-screen"
-              aria-hidden
-            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent mix-blend-screen" aria-hidden />
           </div>
-          {/* Camera dot */}
           <span className="absolute left-1/2 top-[3px] h-1 w-1 -translate-x-1/2 rounded-full bg-cream/40 md:top-1" aria-hidden />
         </div>
-
-        {/* Base */}
         <div
           className="mx-auto mt-[2px] h-3 w-[104%] -translate-x-[2%] rounded-b-[1rem] bg-gradient-to-b from-sage-deep to-ink-soft [transform:translateZ(-12px)_rotateX(-70deg)] [transform-origin:top]"
           aria-hidden

@@ -98,6 +98,15 @@ export const experience: Experience[] = [
   },
 ]
 
+export type Stat = { label: string; value: number; suffix?: string }
+
+export const stats: Stat[] = [
+  { label: 'Years building for the web', value: 5, suffix: '+' },
+  { label: 'Repositories on GitHub', value: 23 },
+  { label: 'Full-stack products shipped', value: 6 },
+  { label: 'Languages spoken', value: 3 },
+]
+
 export type SkillGroup = { group: string; items: string[] }
 
 export const skills: SkillGroup[] = [

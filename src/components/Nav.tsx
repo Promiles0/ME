@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { profile } from '../data/profile'
 import { useLenis } from './SmoothScroll'
+import Scramble from './Scramble'
 
 const links = [
   { href: '#about', label: 'About' },
@@ -115,7 +116,7 @@ export default function Nav() {
                     dark ? 'hover:bg-cream hover:text-ink' : 'hover:bg-ink hover:text-cream'
                   }`}
                 >
-                  {l.label}
+                  <Scramble text={l.label} />
                 </a>
               </li>
             ))}
