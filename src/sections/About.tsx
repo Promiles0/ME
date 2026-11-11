@@ -20,7 +20,7 @@ export default function About() {
   const field = useRef<ParticleFieldHandle | null>(null)
   const reduced = useReducedMotion()
   const [active, setActive] = useState(false)
-  const shapes = useMemo(() => portraitShapes('/images/portrait.jpg'), [])
+  const shapes = useMemo(() => portraitShapes('/images/portrait.jpg', 1 / 2.22, 1 / 2.4), [])
 
   // Only run the particle loop while the card is on screen.
   useEffect(() => {
@@ -42,8 +42,8 @@ export default function About() {
       // Assemble the face while the card travels up the lower half of the screen.
       ScrollTrigger.create({
         trigger: card.current,
-        start: 'top 95%',
-        end: 'center 45%',
+        start: 'top 110%',
+        end: 'center 50%',
         scrub: 0.6,
         onUpdate: (self) => field.current?.setMorph(self.progress),
       })
@@ -69,31 +69,35 @@ export default function About() {
         <div className="mt-16 grid gap-12 md:mt-24 md:grid-cols-12 md:gap-10">
           {/* Particle portrait */}
           <div className="md:col-span-5">
-            <div
-              ref={card}
-              className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-[2rem] bg-sage"
-              data-cursor="Touch"
-            >
+            {/* Wrapper: the card, plus a particle canvas that reaches up above it so the
+                hero's grains can be seen arriving and pouring into the face. */}
+            <div className="relative mx-auto w-full max-w-md">
               <Suspense fallback={null}>
                 <ParticleField
                   shapes={shapes}
                   handle={field}
                   active={active && !reduced}
-                  className="absolute inset-0"
+                  className="pointer-events-none absolute bottom-0 left-1/2 z-[2] h-[222%] w-[240%] -translate-x-1/2"
                   fit={0.9}
                   mouseStrength={0.32}
-                  lean={0.25}
+                  lean={0.15}
                   spin={false}
                   count={{ high: 18000, low: 7000 }}
-                  style={{ colorA: '#1a1a16', colorB: '#5c5f55', colorHot: '#e8d2b5', split: 0.42, size: 2.1, shadeSize: 0.45, drift: 0.02 }}
+                  style={{ colorA: '#1a1a16', colorB: '#e8d2b5', colorHot: '#fff4e3', split: 0.46, size: 2.2, shadeSize: 0.35, drift: 0.03 }}
                 />
               </Suspense>
+            <div
+              ref={card}
+              className="relative mx-auto aspect-[4/5] w-full max-w-md overflow-hidden rounded-[2rem] bg-sage"
+              data-cursor="Touch"
+            >
               <p className="sr-only">Portrait of {profile.name}, rendered as particles.</p>
               <div className="pointer-events-none absolute inset-0 rounded-[2rem] ring-1 ring-inset ring-ink/10" />
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-full bg-ink/85 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream backdrop-blur">
+              <div className="absolute bottom-4 left-4 right-4 z-[3] flex items-center justify-between rounded-full bg-ink/85 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cream backdrop-blur">
                 <span>{profile.location}</span>
                 <span>{profile.languages.join(' · ')}</span>
               </div>
+            </div>
             </div>
           </div>
 

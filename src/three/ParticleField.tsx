@@ -164,7 +164,7 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
   // Build the point sets (possibly async, e.g. after an image loads).
   useEffect(() => {
     let alive = true
-    Promise.resolve(shapes(count, worldWidth)).then((set: ShapeSet) => {
+    Promise.resolve(shapes(count, worldWidth, { w: viewport.width, h: viewport.height })).then((set: ShapeSet) => {
       if (!alive) return
       const g = new THREE.BufferGeometry()
       const rand = new Float32Array(count)
@@ -184,7 +184,7 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
     return () => {
       alive = false
     }
-  }, [shapes, count, worldWidth, invalidate])
+  }, [shapes, count, worldWidth, viewport.width, viewport.height, invalidate])
 
   const material = useMemo(
     () =>

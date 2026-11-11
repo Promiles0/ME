@@ -11,7 +11,8 @@ export type ShapeSet = {
   shade?: Float32Array
 }
 
-export type ShapeBuilder = (count: number, worldWidth: number) => Promise<ShapeSet> | ShapeSet
+/** `view` is the canvas's visible size in world units, for builders that place shapes off-centre. */
+export type ShapeBuilder = (count: number, worldWidth: number, view: { w: number; h: number }) => Promise<ShapeSet> | ShapeSet
 
 /** Sample points that fall inside rendered glyphs of `text`. */
 export function textPoints(text: string, count: number, worldWidth: number, fontFamily = 'Bebas Neue'): Float32Array {

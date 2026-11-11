@@ -62,22 +62,6 @@ export default function ParticleStream() {
 
     const legs: Leg[] = [
       {
-        // Hero cloud (right side of the hero panel) → portrait card
-        from: () => {
-          const hero = rectOf(document.querySelector('main > section'))
-          if (!hero) return null
-          const top = Math.max(hero.y + hero.h - window.innerHeight, -window.innerHeight * 0.2)
-          return { x: hero.w * 0.4, y: top + window.innerHeight * 0.15, w: hero.w * 0.5, h: window.innerHeight * 0.5 }
-        },
-        to: () => {
-          const card = rectOf(document.querySelector('#about [aria-hidden] canvas')?.closest('.aspect-\\[4\\/5\\]') ?? null)
-          return card ? { x: card.x + card.w * 0.22, y: card.y + card.h * 0.12, w: card.w * 0.56, h: card.h * 0.66 } : null
-        },
-        progress: 0,
-        colorA: '#1a1a16',
-        colorB: '#e8d2b5',
-      },
-      {
         // Bottom edge of the page → footer letters
         from: () => {
           const main = rectOf(document.querySelector('main'))
@@ -95,18 +79,6 @@ export default function ParticleStream() {
 
     const triggers: ScrollTrigger[] = []
     const setup = () => {
-      const card = document.querySelector('#about .aspect-\\[4\\/5\\]')
-      if (card) {
-        triggers.push(
-          ScrollTrigger.create({
-            trigger: card,
-            start: 'top 115%',
-            end: 'top 35%',
-            scrub: 0.4,
-            onUpdate: (s) => (legs[0].progress = s.progress),
-          }),
-        )
-      }
       triggers.push(
         ScrollTrigger.create({
           trigger: document.documentElement,
@@ -114,7 +86,7 @@ export default function ParticleStream() {
           end: 'bottom bottom',
           scrub: 0.4,
           invalidateOnRefresh: true,
-          onUpdate: (s) => (legs[1].progress = s.progress),
+          onUpdate: (s) => (legs[0].progress = s.progress),
         }),
       )
     }

@@ -100,8 +100,12 @@ export default function Experience() {
     // overflow-clip (not hidden) so the sticky panel keeps working
     <section id="experience" ref={section} data-nav-theme="light" className="relative overflow-clip bg-sage py-28 md:py-40">
       {/* Giant outlined year drifting in the background */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/3 select-none text-center font-display text-[38vw] leading-none text-ink/[0.05]" aria-hidden>
-        {current.year}
+      {/* Giant year: pinned to the screen for the whole section, rolling digit by
+          digit in step with the small year on the left. */}
+      <div className="pointer-events-none absolute inset-0 select-none" aria-hidden>
+        <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden">
+          <RollingYear year={current.year} className="font-display text-[38vw] text-ink/[0.06]" />
+        </div>
       </div>
 
       <div className="relative mx-auto max-w-[88rem] px-6 md:px-10">
