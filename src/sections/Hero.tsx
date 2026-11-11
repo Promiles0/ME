@@ -3,8 +3,10 @@ import { ArrowDown, ArrowUpRight } from 'lucide-react'
 import { gsap, ScrollTrigger, useReducedMotion } from '../lib/motion'
 import { profile } from '../data/profile'
 import Magnetic from '../components/Magnetic'
+import Typewriter from '../components/Typewriter'
 import type { ParticleFieldHandle } from '../three/ParticleField'
 import { wordShapes } from '../three/shapes'
+import { onTilt } from '../lib/tilt'
 
 const ParticleField = lazy(() => import('../three/ParticleField'))
 
@@ -15,27 +17,25 @@ const STAGES = [
   { word: 'Flow', label: 'Waves', line: 'Then it ships, and keeps moving with the people who use it.' },
 ]
 
+const ROLES = ['web apps that feel instant.', 'full-stack products.', 'interfaces people enjoy.', 'things that ship.']
+
 /**
- * Hero. The section is taller than the viewport; the inner panel sticks while
- * the particle cloud behind the headline morphs from the name into a sphere and
- * then a torus knot. Headline lines reveal once the preloader has finished.
+ * Hero. The name *is* the particle cloud: full width, centred, and alive.
+ * The pointer pushes letters aside, a click blows the whole word apart and it
+ * regroups, and on phones tilting the device leans it. Scrolling morphs it
+ * into a galaxy, then waves. A typed line underneath says what I build.
  */
 export default function Hero({ ready }: Props) {
   const section = useRef<HTMLElement>(null)
-  const panel = useRef<HTMLDivElement>(null)
   const field = useRef<ParticleFieldHandle | null>(null)
   const reduced = useReducedMotion()
   const [active, setActive] = useState(true)
-  const [roleIndex, setRoleIndex] = useState(0)
   const [stage, setStage] = useState(-1)
-  const shapes = useMemo(() => wordShapes(profile.shortName.toUpperCase()), [])
+  const [hint, setHint] = useState(true)
 
-  // Rotate the role word.
-  useEffect(() => {
-    if (!ready) return
-    const id = setInterval(() => setRoleIndex((i) => (i + 1) % profile.roles.length), 2600)
-    return () => clearInterval(id)
-  }, [ready])
+  // Full name on wide screens, short name on phones so letters stay big.
+  const word = typeof window !== 'undefined' && window.innerWidth < 768 ? profile.shortName.toUpperCase() : 'AROI SERGE'
+  const shapes = useMemo(() => wordShapes(word), [word])
 
   // Pause the 3D loop when the hero is off screen.
   useEffect(() => {
@@ -46,21 +46,19 @@ export default function Hero({ ready }: Props) {
     return () => io.disconnect()
   }, [])
 
+  // Phones: tilt leans the cloud.
+  useEffect(() => onTilt((x, y) => field.current?.tilt?.(x, y)), [])
+
   // Entrance + scroll choreography.
   useEffect(() => {
     if (!ready || !section.current) return
     const ctx = gsap.context(() => {
-      const lines = gsap.utils.toArray<HTMLElement>('[data-hero-line] > span')
       if (reduced) {
-        gsap.set(lines, { yPercent: 0, opacity: 1 })
         gsap.set('[data-hero-fade]', { opacity: 1, y: 0 })
         return
       }
-      const tl = gsap.timeline({ defaults: { ease: 'expo.out' } })
-      tl.fromTo(lines, { yPercent: 110 }, { yPercent: 0, duration: 1.1, stagger: 0.1 }, 0.1)
-        .fromTo('[data-hero-fade]', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.8, stagger: 0.08 }, 0.6)
+      gsap.fromTo('[data-hero-fade]', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.9, stagger: 0.09, ease: 'expo.out', delay: 0.5 })
 
-      // Scroll: morph the particles and fade the copy as the panel scrolls.
       ScrollTrigger.create({
         trigger: section.current,
         start: 'top top',
@@ -73,7 +71,6 @@ export default function Hero({ ready }: Props) {
         },
       })
 
-      // Copy fades and lifts away over the first part of the scroll.
       gsap.fromTo(
         '[data-hero-copy]',
         { opacity: 1, y: 0 },
@@ -82,86 +79,104 @@ export default function Hero({ ready }: Props) {
           y: -40,
           ease: 'none',
           immediateRender: false,
-          scrollTrigger: {
-            trigger: section.current,
-            start: 'top top',
-            end: () => `+=${window.innerHeight * 0.42}`,
-            scrub: true,
-            invalidateOnRefresh: true,
-          },
+          scrollTrigger: { trigger: section.current, start: 'top top', end: () => `+=${window.innerHeight * 0.42}`, scrub: true, invalidateOnRefresh: true },
         },
       )
     }, section)
     return () => ctx.revert()
   }, [ready, reduced])
 
-  const [first, ...rest] = profile.name.split(' ')
-  const last = rest.join(' ')
+  const blast = () => {
+    field.current?.burst?.()
+    setHint(false)
+  }
 
   return (
     <section ref={section} data-nav-theme="light" className="relative h-[190vh]" aria-label="Introduction">
-      <div ref={panel} className="sticky top-0 flex h-screen flex-col overflow-hidden">
-        {/* Diagonal stripe behind everything */}
+      <div className="sticky top-0 flex h-screen flex-col overflow-hidden">
         <div className="stripe bg-cream/70" style={{ left: '58%' }} />
 
-        {/* Particle cloud */}
+        {/* The name, as particles. Click (or tap) to blow it apart. */}
         {!reduced && (
           <Suspense fallback={null}>
-            <ParticleField shapes={shapes} handle={field} choreography spin={false} active={active && ready} className="absolute inset-x-0 top-16 h-[42vh] md:inset-y-0 md:left-[32%] md:h-auto" />
+            <ParticleField
+              shapes={shapes}
+              handle={field}
+              choreography
+              spin={false}
+              fit={0.9}
+              count={{ high: 26000, low: 10000 }}
+              active={active && ready}
+              className="absolute inset-x-0 top-[12vh] h-[52vh] md:top-[6vh] md:h-[66vh]"
+            />
           </Suspense>
         )}
+        {!reduced && (
+          <button
+            type="button"
+            onClick={blast}
+            data-cursor="Blast"
+            aria-label="Scatter the particles"
+            className="absolute inset-x-[8%] top-[22vh] z-[1] h-[30vh] md:top-[18vh] md:h-[40vh]"
+          />
+        )}
         {reduced && (
-          <p className="display pointer-events-none absolute inset-0 grid place-items-center text-[32vw] text-cream/70" aria-hidden>
-            {profile.shortName}
+          <p className="display pointer-events-none absolute inset-x-0 top-[22vh] text-center text-[22vw] leading-none text-ink/80" aria-hidden>
+            {word}
           </p>
         )}
 
-        <div data-hero-copy className="relative mx-auto flex w-full max-w-[88rem] flex-1 flex-col justify-end px-6 pb-24 pt-28 md:px-10 md:pb-28">
-          <p data-hero-fade className="eyebrow mb-6 flex items-center gap-3 opacity-0">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ink opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-ink" />
-            </span>
-            {profile.availability}
+        <h1 className="sr-only">
+          {profile.name}, {profile.title}
+        </h1>
+
+        <div data-hero-copy className="pointer-events-none relative mx-auto flex w-full max-w-[88rem] flex-1 flex-col px-6 pb-8 pt-24 md:px-10 md:pb-10">
+          {/* Line above the word */}
+          <p data-hero-fade className="eyebrow mx-auto flex items-center gap-3 opacity-0">
+            <span className="h-px w-8 bg-current opacity-50" />
+            Hello, I&apos;m Iradukunda
+            <span className="h-px w-8 bg-current opacity-50" />
           </p>
 
-          <h1 className="display text-[clamp(3.6rem,13.5vw,13rem)]">
-            <span data-hero-line className="block overflow-hidden pb-[0.06em]">
-              <span className="block">{first}</span>
-            </span>
-            <span data-hero-line className="block overflow-hidden pb-[0.06em]">
-              <span className="block">
-                {last.split(' ')[0]} <span className="display-outline">{last.split(' ').slice(1).join(' ')}</span>
-              </span>
-            </span>
-          </h1>
+          {/* Typed line under the word */}
+          <p data-hero-fade className="mx-auto mt-[44vh] max-w-[92vw] text-center font-display text-[clamp(1.6rem,4.4vw,3.6rem)] leading-tight opacity-0 md:mt-[58vh]">
+            I build <Typewriter words={ROLES} start={ready} className="text-ink" />
+          </p>
+          {!reduced && (
+            <p
+              data-hero-fade
+              className={`mx-auto mt-2 max-w-[90vw] text-center text-[11px] font-semibold uppercase tracking-[0.2em] opacity-0 transition-opacity duration-700 ${hint ? '' : '!opacity-0'}`}
+              aria-hidden
+            >
+              {typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+                ? 'Tap my name to scatter it · tilt your phone'
+                : 'Move your cursor through my name · click to scatter it'}
+            </p>
+          )}
 
-          <div className="mt-8 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-            <p data-hero-fade className="max-w-md text-base leading-relaxed opacity-0 md:text-lg">
-              <span className="block font-semibold">
-                {profile.title}.{' '}
-                <span className="inline-grid overflow-hidden align-bottom">
-                  {profile.roles.map((r, i) => (
-                    <span
-                      key={r}
-                      aria-hidden={i !== roleIndex}
-                      className="col-start-1 row-start-1 transition-all duration-700 [transition-timing-function:cubic-bezier(.16,1,.3,1)]"
-                      style={{
-                        transform: `translateY(${i === roleIndex ? 0 : i < roleIndex ? -110 : 110}%)`,
-                        opacity: i === roleIndex ? 1 : 0,
-                      }}
-                    >
-                      {r}.
-                    </span>
-                  ))}
-                </span>
+          {/* Bottom bar */}
+          <div className="pointer-events-auto mt-auto flex flex-col items-center gap-5 md:flex-row md:items-end md:justify-between">
+            <p data-hero-fade className="flex items-center gap-3 text-sm font-semibold opacity-0 md:pl-20">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ink opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-ink" />
               </span>
-              <span className="mt-2 block opacity-80">
-                Based in {profile.location}. I design and build full-stack products that feel fast and look sharp.
-              </span>
+              {profile.availability} · {profile.location}
             </p>
 
-            <div data-hero-fade className="flex flex-wrap gap-3 opacity-0">
+            <a
+              data-hero-fade
+              href="#about"
+              className="hidden flex-col items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-0 md:flex"
+            >
+              <span>Scroll</span>
+              <span className="relative h-10 w-px overflow-hidden bg-ink/20">
+                <span className="absolute inset-x-0 top-0 h-1/2 animate-[cue_1.6s_ease-in-out_infinite] bg-ink" />
+              </span>
+              <ArrowDown className="h-3.5 w-3.5" />
+            </a>
+
+            <div data-hero-fade className="flex flex-wrap justify-center gap-3 opacity-0">
               <Magnetic>
                 <a
                   href="#projects"
@@ -184,7 +199,7 @@ export default function Hero({ ready }: Props) {
           </div>
         </div>
 
-        {/* Stage captions: appear once the copy has faded and the particles take over */}
+        {/* Stage captions once the particles take over */}
         <div className="pointer-events-none absolute bottom-10 left-6 md:bottom-14 md:left-10" aria-hidden>
           {STAGES.map((st, i) => (
             <div
@@ -203,20 +218,10 @@ export default function Hero({ ready }: Props) {
             </div>
           ))}
         </div>
-
-        {/* Scroll cue */}
-        <a
-          data-hero-fade
-          href="#about"
-          className="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-0 sm:flex"
-        >
-          <span>Scroll</span>
-          <span className="relative h-10 w-px overflow-hidden bg-ink/20">
-            <span className="absolute inset-x-0 top-0 h-1/2 animate-[cue_1.6s_ease-in-out_infinite] bg-ink" />
-          </span>
-          <ArrowDown className="h-3.5 w-3.5" />
-        </a>
-        <style>{`@keyframes cue { 0% { transform: translateY(-100%); } 100% { transform: translateY(200%); } }`}</style>
+        <style>{`
+          @keyframes cue { 0% { transform: translateY(-100%); } 100% { transform: translateY(200%); } }
+          @keyframes caret { 50% { opacity: 0; } }
+        `}</style>
       </div>
     </section>
   )

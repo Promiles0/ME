@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { skills } from '../data/profile'
 import SectionHeading from '../components/SectionHeading'
@@ -5,11 +6,13 @@ import VelocityMarquee from '../components/VelocityMarquee'
 import Reveal from '../components/Reveal'
 import { useReducedMotion } from '../lib/motion'
 
+const SkillsPlayground = lazy(() => import('../components/SkillsPlayground'))
+
 const marqueeWords = ['React', 'TypeScript', 'Supabase', 'PostgreSQL', 'Tailwind', 'Next.js', 'Cloudflare', 'SEO', 'Design', 'Vite', 'Stripe', 'C++']
 
 /**
- * Skills: a marquee strip and groups of pill tags that pop in with a stagger.
- * Hovering a tag lifts it and tilts it slightly, like a loose sticker.
+ * Skills: a velocity marquee, then a physics playground where every skill is
+ * a body you can throw around. Reduced motion gets the grouped tag list.
  */
 export default function Skills() {
   const reduced = useReducedMotion()
@@ -25,6 +28,14 @@ export default function Skills() {
       {/* Marquee that reacts to scroll speed and direction */}
       <VelocityMarquee words={marqueeWords} />
 
+      {/* Physics playground (static grouped list under reduced motion) */}
+      {!reduced ? (
+        <div className="relative mx-auto mt-16 max-w-[88rem] px-6 md:mt-24 md:px-10">
+          <Suspense fallback={<div className="h-[62vh] min-h-[420px] rounded-[2rem] border border-cream/15 bg-ink-soft md:h-[68vh]" />}>
+            <SkillsPlayground />
+          </Suspense>
+        </div>
+      ) : (
       <div className="relative mx-auto mt-16 grid max-w-[88rem] gap-12 px-6 md:mt-24 md:grid-cols-2 md:px-10 lg:gap-x-20">
         {skills.map((group, gi) => (
           <Reveal key={group.group} delay={gi * 0.05}>
@@ -59,6 +70,7 @@ export default function Skills() {
           </Reveal>
         ))}
       </div>
+      )}
     </section>
   )
 }

@@ -20,7 +20,7 @@ import { GithubIcon } from '../components/icons'
  *    vertical stack on phones).
  */
 
-type ActionsProps = { p: Project; onOpen: (p: Project) => void }
+type ActionsProps = { p: Project; onOpen: (p: Project, from: HTMLElement) => void }
 
 function Actions({ p, onOpen }: ActionsProps) {
   return (
@@ -29,7 +29,7 @@ function Actions({ p, onOpen }: ActionsProps) {
         <button
           type="button"
           data-cursor="Open"
-          onClick={() => onOpen(p)}
+          onClick={(e) => onOpen(p, e.currentTarget)}
           className="rounded-full bg-cream px-6 py-3 text-sm font-semibold text-ink transition-transform hover:scale-[1.03]"
         >
           Case notes
@@ -80,6 +80,14 @@ function Tech({ p }: { p: Project }) {
 export default function Projects() {
   const [list, setList] = useState<Project[]>(localProjects)
   const [open, setOpen] = useState<Project | null>(null)
+  const [origin, setOrigin] = useState<DOMRect | null>(null)
+
+  // Open a case study growing out of the laptop screen next to the button.
+  const openFrom = useCallback((p: Project, from: HTMLElement | null) => {
+    const screen = from?.closest('[data-case]')?.querySelector('.aspect-video') ?? null
+    setOrigin(screen ? screen.getBoundingClientRect() : null)
+    setOpen(p)
+  }, [])
   const [index, setIndex] = useState(0)
   const reduced = useReducedMotion()
   const desktop = useMediaQuery('(min-width: 768px)')
@@ -98,17 +106,19 @@ export default function Projects() {
   }, [])
 
   const close = useCallback(() => setOpen(null), [])
+  const ordered = [...list].sort((a, b) => Number(b.featured) - Number(a.featured) || a.order - b.order)
+  const nextOf = (p: Project | null) => (p ? ordered[(ordered.indexOf(p) + 1) % ordered.length] : null)
 
   // The command palette asks for a project by slug.
   useEffect(() => {
     const onOpen = (e: Event) => {
       const slug = (e as CustomEvent<string>).detail
       const p = list.find((x) => x.slug === slug)
-      if (p) setOpen(p)
+      if (p) openFrom(p, null)
     }
     window.addEventListener('open-project', onOpen)
     return () => window.removeEventListener('open-project', onOpen)
-  }, [list])
+  }, [list, openFrom])
   const onVideo = useCallback((v: HTMLVideoElement | null) => {
     video.current = v
   }, [])
@@ -179,7 +189,7 @@ export default function Projects() {
       {/* Featured: sticky laptop, video scrubbed by scroll on desktop */}
       {featured && (
         <div ref={featuredWrap} className="relative mt-16 md:mt-10 md:h-[220vh]">
-          <div className="md:sticky md:top-0 md:flex md:h-screen md:items-center">
+          <div data-case className="md:sticky md:top-0 md:flex md:h-screen md:items-center">
             <div className="mx-auto grid w-full max-w-[88rem] items-center gap-12 px-6 md:grid-cols-12 md:px-10">
               <Reveal className="md:order-2 md:col-span-7">
                 <DeviceMockup
@@ -209,7 +219,7 @@ export default function Projects() {
                 </Reveal>
                 <Reveal delay={0.15}>
                   <Tech p={featured} />
-                  <Actions p={featured} onOpen={setOpen} />
+                  <Actions p={featured} onOpen={openFrom} />
                 </Reveal>
               </div>
             </div>
@@ -222,6 +232,7 @@ export default function Projects() {
         <div ref={track} className="md:flex md:h-full md:items-center md:will-change-transform">
           {rest.map((p, i) => (
             <article
+              data-case
               key={p.slug}
               className="mx-auto grid w-full max-w-[88rem] items-center gap-12 px-6 pb-28 md:w-screen md:max-w-none md:shrink-0 md:grid-cols-12 md:px-10 md:pb-0 lg:px-24"
               aria-label={p.title}
@@ -248,7 +259,7 @@ export default function Projects() {
                 </Reveal>
                 <Reveal delay={0.15}>
                   <Tech p={p} />
-                  <Actions p={p} onOpen={setOpen} />
+                  <Actions p={p} onOpen={openFrom} />
                 </Reveal>
               </div>
             </article>
@@ -266,7 +277,18 @@ export default function Projects() {
         </div>
       </div>
 
-      <ProjectModal project={open} onClose={close} />
+      <ProjectModal
+        project={open}
+        origin={origin}
+        onClose={close}
+        nextTitle={nextOf(open)?.title ?? ''}
+        onNext={() => {
+          const n = nextOf(open)
+          if (!n) return
+          setOrigin(null)
+          setOpen(n)
+        }}
+      />
     </section>
   )
 }

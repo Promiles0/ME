@@ -17,6 +17,10 @@ import { isLowPowerDevice } from '../lib/motion'
 export type ParticleFieldHandle = {
   /** 0 = shape a, 1 = shape b, 2 = shape c. Values in between blend. */
   setMorph: (v: number) => void
+  /** Blow every particle outward; they drift back into shape. */
+  burst?: () => void
+  /** Device tilt in -1..1 on each axis (phones); leans the cloud like the pointer does. */
+  tilt?: (x: number, y: number) => void
 }
 
 const vertex = /* glsl */ `
@@ -29,6 +33,7 @@ const vertex = /* glsl */ `
   uniform float uDrift;
   uniform float uPixelRatio;
   uniform float uMode;
+  uniform float uKick;
 
   attribute vec3 aPosB;
   attribute vec3 aPosC;
@@ -70,7 +75,7 @@ const vertex = /* glsl */ `
     if (uMode > 0.5) {
       // Mid-morph burst: particles fly out along a random direction, then settle.
       vec3 dir = normalize(vec3(sin(aRand * 91.7), cos(aRand * 47.3), sin(aRand * 13.1)) + 0.0001);
-      float burst = sin(s1 * 3.14159) + sin(s2 * 3.14159);
+      float burst = sin(s1 * 3.14159) + sin(s2 * 3.14159) + uKick * (2.4 + aRand * 2.6);
       p += dir * burst * (0.6 + aRand * 0.9);
     }
 
@@ -151,6 +156,7 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
   const target = useRef(new THREE.Vector3(999, 999, 0))
   const lean = useRef({ x: 0, y: 0 })
   const morph = useRef(0)
+  const kick = useRef(0)
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null)
 
   const worldWidth = Math.min(viewport.width * fit, 9)
@@ -201,6 +207,7 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
           uColorHot: { value: new THREE.Color(style.colorHot) },
           uSplit: { value: style.split },
           uMode: { value: choreography ? 1 : 0 },
+          uKick: { value: 0 },
         },
       }),
     [interactive, mouseStrength, style, choreography],
@@ -208,6 +215,14 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
 
   useEffect(() => {
     handle.current = {
+      burst: () => {
+        kick.current = 1
+        invalidate()
+      },
+      tilt: (x, y) => {
+        lean.current = { x, y }
+        invalidate()
+      },
       setMorph: (v) => {
         morph.current = v
         invalidate()
@@ -248,6 +263,9 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
     const u = material.uniforms
     u.uTime.value = state.clock.elapsedTime
     u.uMorph.value += (morph.current - u.uMorph.value) * Math.min(1, delta * 6)
+    // Kick rises fast and settles slowly, so the burst feels like an explosion then a regroup.
+    kick.current *= Math.pow(0.4, delta)
+    u.uKick.value += (kick.current - u.uKick.value) * Math.min(1, delta * 14)
     mouse.current.lerp(target.current, Math.min(1, delta * 9))
     ;(u.uMouse.value as THREE.Vector3).copy(mouse.current)
 

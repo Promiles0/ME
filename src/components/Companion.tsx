@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { gsap, prefersReducedMotion } from '../lib/motion'
+import { onTilt } from '../lib/tilt'
 
 /**
  * "Pip", a small guide who rides along in the bottom-left corner. Its eyes
@@ -87,7 +88,15 @@ export default function Companion() {
       yTo((dy / d) * k)
     }
     window.addEventListener('pointermove', move, { passive: true })
-    return () => window.removeEventListener('pointermove', move)
+    // Phones: Pip looks where the device tilts.
+    const offTilt = onTilt((x, y) => {
+      xTo(x * 6)
+      yTo(-y * 6)
+    })
+    return () => {
+      window.removeEventListener('pointermove', move)
+      offTilt()
+    }
   }, [reduced])
 
   // Blink now and then.
