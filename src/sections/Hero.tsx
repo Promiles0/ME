@@ -70,16 +70,27 @@ export default function Hero({ ready }: Props) {
           field.current?.setMorph(self.progress * 2)
           const pr = self.progress
           setStage(pr < 0.32 ? -1 : pr < 0.72 ? 0 : 1)
-          if (panel.current) {
-            const copy = panel.current.querySelector<HTMLElement>('[data-hero-copy]')
-            if (copy) {
-              const p = Math.min(1, self.progress * 2.2)
-              copy.style.opacity = String(1 - p)
-              copy.style.transform = `translateY(${p * -40}px)`
-            }
-          }
         },
       })
+
+      // Copy fades and lifts away over the first part of the scroll.
+      gsap.fromTo(
+        '[data-hero-copy]',
+        { opacity: 1, y: 0 },
+        {
+          opacity: 0,
+          y: -40,
+          ease: 'none',
+          immediateRender: false,
+          scrollTrigger: {
+            trigger: section.current,
+            start: 'top top',
+            end: () => `+=${window.innerHeight * 0.42}`,
+            scrub: true,
+            invalidateOnRefresh: true,
+          },
+        },
+      )
     }, section)
     return () => ctx.revert()
   }, [ready, reduced])

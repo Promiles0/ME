@@ -109,7 +109,7 @@ export default function Companion() {
 
   return (
     <div
-      className={`fixed bottom-5 left-5 z-40 flex items-end gap-3 transition-all duration-500 md:bottom-8 md:left-8 ${away ? "pointer-events-none translate-y-24 opacity-0" : ""}`}
+      className={`fixed bottom-4 right-4 z-40 flex flex-row-reverse items-end gap-3 transition-all duration-500 md:bottom-8 md:left-8 md:right-auto md:flex-row ${away ? "pointer-events-none translate-y-24 opacity-0" : ""}`}
     >
       <button
         ref={body}
@@ -120,7 +120,7 @@ export default function Companion() {
         }}
         data-cursor={tip ? 'Hush' : 'Hint'}
         aria-label={hintsOn ? 'Pip, your guide. Click to hide hints.' : 'Pip, your guide. Click for a hint.'}
-        className={`relative grid h-12 w-12 shrink-0 place-items-center shadow-[0_12px_30px_-10px_rgba(26,26,22,0.55)] transition-[border-radius,background-color] duration-700 [transition-timing-function:cubic-bezier(.16,1,.3,1)] md:h-14 md:w-14 ${
+        className={`relative grid h-11 w-11 shrink-0 place-items-center shadow-[0_12px_30px_-10px_rgba(26,26,22,0.55)] transition-[border-radius,background-color] duration-700 [transition-timing-function:cubic-bezier(.16,1,.3,1)] md:h-14 md:w-14 ${
           ch.dark ? 'bg-cream' : 'bg-ink'
         }`}
         style={{ borderRadius: ch.radius }}
@@ -145,7 +145,7 @@ export default function Companion() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.96 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className={`mb-2 max-w-[15rem] origin-bottom-left rounded-2xl rounded-bl-sm px-4 py-3 text-sm font-semibold leading-snug shadow-lg ${
+            className={`mb-2 max-w-[15rem] origin-bottom-right rounded-2xl rounded-br-sm md:origin-bottom-left md:rounded-br-2xl md:rounded-bl-sm px-4 py-3 text-sm font-semibold leading-snug shadow-lg ${
               ch.dark ? 'bg-cream text-ink' : 'bg-ink text-cream'
             }`}
           >
