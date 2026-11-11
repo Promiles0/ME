@@ -1,14 +1,14 @@
-import { imagePoints, scatterPoints, spherePoints, textPoints, torusKnotPoints, type ShapeBuilder } from './textPoints'
+import { galaxyPoints, imagePoints, scatterPoints, textPoints, wavePoints, type ShapeBuilder } from './textPoints'
 
-/** Hero: the word, then a sphere, then a torus knot. Waits for the display font. */
+/** Hero: the word, then a spiral galaxy, then a rolling wave field. Waits for the display font. */
 export function wordShapes(word: string): ShapeBuilder {
   return async (count, worldWidth) => {
     const load = document.fonts?.load('400 200px "Bebas Neue"').catch(() => undefined) ?? Promise.resolve()
     await Promise.race([load, new Promise((r) => setTimeout(r, 1500))])
     return {
       a: textPoints(word, count, worldWidth),
-      b: spherePoints(count, worldWidth * 0.22),
-      c: torusKnotPoints(count, worldWidth * 0.2, worldWidth * 0.045),
+      b: galaxyPoints(count, worldWidth * 0.42),
+      c: wavePoints(count, worldWidth * 1.1, worldWidth * 0.7),
     }
   }
 }

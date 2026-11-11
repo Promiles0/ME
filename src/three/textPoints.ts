@@ -179,3 +179,37 @@ export function scatterPoints(count: number, width: number, height: number, dept
   }
   return out
 }
+
+/**
+ * A three-armed spiral galaxy lying flat in the XZ plane, with a dense core.
+ * The hero shader swirls it (inner stars faster) and tilts it toward the viewer.
+ */
+export function galaxyPoints(count: number, radius: number, arms = 3): Float32Array {
+  const out = new Float32Array(count * 3)
+  for (let i = 0; i < count; i++) {
+    const r = Math.pow(Math.random(), 1.7) * radius
+    const branch = ((i % arms) / arms) * Math.PI * 2
+    const twist = (r / radius) * 5.2
+    const spread = Math.pow(Math.random(), 3) * 0.55 * (0.25 + r / radius) * radius * 0.35
+    const sign = () => (Math.random() < 0.5 ? -1 : 1)
+    out[i * 3] = Math.cos(branch + twist) * r + sign() * spread * Math.random()
+    out[i * 3 + 1] = sign() * Math.pow(Math.random(), 4) * radius * 0.08 * (1 - r / radius + 0.2)
+    out[i * 3 + 2] = Math.sin(branch + twist) * r + sign() * spread * Math.random()
+  }
+  return out
+}
+
+/** A jittered grid in the XZ plane; the hero shader turns it into rolling waves. */
+export function wavePoints(count: number, width: number, depth: number): Float32Array {
+  const out = new Float32Array(count * 3)
+  const cols = Math.ceil(Math.sqrt(count * (width / depth)))
+  const rows = Math.ceil(count / cols)
+  for (let i = 0; i < count; i++) {
+    const cx = i % cols
+    const cz = Math.floor(i / cols)
+    out[i * 3] = (cx / (cols - 1) - 0.5) * width + (Math.random() - 0.5) * (width / cols) * 0.6
+    out[i * 3 + 1] = 0
+    out[i * 3 + 2] = (cz / (rows - 1) - 0.5) * depth + (Math.random() - 0.5) * (depth / rows) * 0.6
+  }
+  return out
+}

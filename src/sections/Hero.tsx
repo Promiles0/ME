@@ -10,6 +10,11 @@ const ParticleField = lazy(() => import('../three/ParticleField'))
 
 type Props = { ready: boolean }
 
+const STAGES = [
+  { word: 'Ideas', label: 'Galaxy', line: 'Every product starts as scattered thoughts pulled into orbit.' },
+  { word: 'Flow', label: 'Waves', line: 'Then it ships, and keeps moving with the people who use it.' },
+]
+
 /**
  * Hero. The section is taller than the viewport; the inner panel sticks while
  * the particle cloud behind the headline morphs from the name into a sphere and
@@ -22,6 +27,7 @@ export default function Hero({ ready }: Props) {
   const reduced = useReducedMotion()
   const [active, setActive] = useState(true)
   const [roleIndex, setRoleIndex] = useState(0)
+  const [stage, setStage] = useState(-1)
   const shapes = useMemo(() => wordShapes(profile.shortName.toUpperCase()), [])
 
   // Rotate the role word.
@@ -62,6 +68,8 @@ export default function Hero({ ready }: Props) {
         scrub: true,
         onUpdate: (self) => {
           field.current?.setMorph(self.progress * 2)
+          const pr = self.progress
+          setStage(pr < 0.32 ? -1 : pr < 0.72 ? 0 : 1)
           if (panel.current) {
             const copy = panel.current.querySelector<HTMLElement>('[data-hero-copy]')
             if (copy) {
@@ -88,7 +96,7 @@ export default function Hero({ ready }: Props) {
         {/* Particle cloud */}
         {!reduced && (
           <Suspense fallback={null}>
-            <ParticleField shapes={shapes} handle={field} active={active && ready} className="absolute inset-x-0 top-16 h-[42vh] md:inset-y-0 md:left-[32%] md:h-auto" />
+            <ParticleField shapes={shapes} handle={field} choreography spin={false} active={active && ready} className="absolute inset-x-0 top-16 h-[42vh] md:inset-y-0 md:left-[32%] md:h-auto" />
           </Suspense>
         )}
         {reduced && (
@@ -162,6 +170,26 @@ export default function Hero({ ready }: Props) {
               </Magnetic>
             </div>
           </div>
+        </div>
+
+        {/* Stage captions: appear once the copy has faded and the particles take over */}
+        <div className="pointer-events-none absolute bottom-10 left-6 md:bottom-14 md:left-10" aria-hidden>
+          {STAGES.map((st, i) => (
+            <div
+              key={st.word}
+              className="absolute bottom-0 left-0 w-[80vw] max-w-md transition-all duration-700 [transition-timing-function:cubic-bezier(.16,1,.3,1)]"
+              style={{ opacity: stage === i ? 1 : 0, transform: `translateY(${stage === i ? 0 : stage > i ? -30 : 30}px)` }}
+            >
+              <p className="eyebrow opacity-70">
+                0{i + 1} / 02 · {st.label}
+              </p>
+              <p className="display mt-2 text-[clamp(3.5rem,9vw,8rem)]">
+                {st.word}
+                <span className="text-cream">.</span>
+              </p>
+              <p className="mt-2 max-w-xs text-sm opacity-80">{st.line}</p>
+            </div>
+          ))}
         </div>
 
         {/* Scroll cue */}

@@ -28,6 +28,7 @@ const vertex = /* glsl */ `
   uniform float uShadeSize;
   uniform float uDrift;
   uniform float uPixelRatio;
+  uniform float uMode;
 
   attribute vec3 aPosB;
   attribute vec3 aPosC;
@@ -43,8 +44,35 @@ const vertex = /* glsl */ `
     // Stagger each particle a little so the morph ripples rather than snaps.
     float s1 = smoothstep(0.0, 1.0, (m1 - aRand * 0.25) / 0.75);
     float s2 = smoothstep(0.0, 1.0, (m2 - aRand * 0.25) / 0.75);
-    vec3 p = mix(position, aPosB, s1);
-    p = mix(p, aPosC, s2);
+    vec3 pb = aPosB;
+    vec3 pc = aPosC;
+    float waveH = 0.0;
+
+    if (uMode > 0.5) {
+      // Galaxy: differential swirl (inner stars orbit faster), then tilt toward the viewer.
+      float rr = length(pb.xz);
+      float ang = uTime * 0.45 / (0.35 + rr * 0.6);
+      float ca = cos(ang), sa = sin(ang);
+      pb.xz = mat2(ca, -sa, sa, ca) * pb.xz;
+      pb.yz = mat2(cos(1.05), -sin(1.05), sin(1.05), cos(1.05)) * pb.yz;
+
+      // Waves: two crossing swells rolling toward the viewer, tilted like a landscape.
+      float tw = uTime * 1.3;
+      waveH = 0.5 * sin(pc.x * 1.2 + tw) + 0.32 * cos(pc.z * 1.9 + tw * 0.8) + 0.12 * sin((pc.x + pc.z) * 3.1 - tw * 1.6);
+      pc.y += waveH;
+      pc.yz = mat2(cos(0.6), -sin(0.6), sin(0.6), cos(0.6)) * pc.yz;
+      pc.y -= 0.2;
+    }
+
+    vec3 p = mix(position, pb, s1);
+    p = mix(p, pc, s2);
+
+    if (uMode > 0.5) {
+      // Mid-morph burst: particles fly out along a random direction, then settle.
+      vec3 dir = normalize(vec3(sin(aRand * 91.7), cos(aRand * 47.3), sin(aRand * 13.1)) + 0.0001);
+      float burst = sin(s1 * 3.14159) + sin(s2 * 3.14159);
+      p += dir * burst * (0.6 + aRand * 0.9);
+    }
 
     // Idle drift: slow, organic breathing.
     float t = uTime * 0.6;
@@ -59,7 +87,7 @@ const vertex = /* glsl */ `
     float dist = length(d);
     float force = smoothstep(1.4, 0.0, dist) * uMouseStrength;
     p += normalize(d + 0.0001) * force * 0.9;
-    vForce = force;
+    vForce = max(force, uMode * s2 * clamp(waveH * 2.2, 0.0, 1.0) * 0.55);
     vShade = aShade;
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -113,9 +141,10 @@ type CloudProps = {
   lean: number
   spin: boolean
   style: Required<ParticleStyle>
+  choreography: boolean
 }
 
-function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: leanAmount, spin, style }: CloudProps) {
+function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: leanAmount, spin, style, choreography }: CloudProps) {
   const points = useRef<THREE.Points>(null)
   const { viewport, size, gl, invalidate } = useThree()
   const mouse = useRef(new THREE.Vector3(999, 999, 0))
@@ -171,9 +200,10 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
           uColorB: { value: new THREE.Color(style.colorB) },
           uColorHot: { value: new THREE.Color(style.colorHot) },
           uSplit: { value: style.split },
+          uMode: { value: choreography ? 1 : 0 },
         },
       }),
-    [interactive, mouseStrength, style],
+    [interactive, mouseStrength, style, choreography],
   )
 
   useEffect(() => {
@@ -251,6 +281,8 @@ type Props = {
   /** Point counts for capable and low-powered devices. */
   count?: { high: number; low: number }
   style?: ParticleStyle
+  /** Hero-only motion: swirling galaxy, rolling waves and a burst between shapes. */
+  choreography?: boolean
 }
 
 const defaultStyle: Required<ParticleStyle> = {
@@ -274,6 +306,7 @@ export default function ParticleField({
   spin = true,
   count = { high: 22000, low: 9000 },
   style,
+  choreography = false,
 }: Props) {
   const lowPower = useMemo(isLowPowerDevice, [])
   const n = lowPower ? count.low : count.high
@@ -298,6 +331,7 @@ export default function ParticleField({
           lean={lean}
           spin={spin}
           style={merged}
+          choreography={choreography}
         />
       </Canvas>
     </div>
