@@ -7,6 +7,8 @@ export type ShapeSet = {
   a: Float32Array
   b: Float32Array
   c: Float32Array
+  /** Optional fourth shape (morph 2 -> 3). */
+  d?: Float32Array
   /** Optional per-point tone in 0..1 (0 = darkest). Random when omitted. */
   shade?: Float32Array
 }

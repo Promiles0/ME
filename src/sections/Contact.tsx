@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type FormEvent } from 'react'
-import { ArrowUpRight, Check, Loader2 } from 'lucide-react'
+import { ArrowUpRight, Check, Download, Loader2 } from 'lucide-react'
+import { downloadCV } from '../lib/cv'
 import { profile } from '../data/profile'
 import { apiFetch, hasApi, TURNSTILE_SITE_KEY } from '../lib/api'
 import Turnstile, { type TurnstileHandle } from '../components/Turnstile'
@@ -19,6 +20,7 @@ export default function Contact() {
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState('')
   const [token, setToken] = useState('')
+  const [cvBusy, setCvBusy] = useState(false)
   const turnstile = useRef<TurnstileHandle>(null)
   const onToken = useCallback((t: string) => setToken(t), [])
 
@@ -112,6 +114,27 @@ export default function Contact() {
                   </span>
                 </a>
               </Magnetic>
+            </Reveal>
+
+            <Reveal delay={0.18} className="mt-8">
+              <button
+                type="button"
+                onClick={async () => {
+                  setCvBusy(true)
+                  try {
+                    await downloadCV()
+                  } finally {
+                    setCvBusy(false)
+                  }
+                }}
+                data-cursor="Save"
+                className="group inline-flex items-center gap-3 rounded-full border border-ink/30 bg-paper/40 py-3 pl-6 pr-3 text-sm font-semibold transition-colors hover:bg-ink hover:text-cream"
+              >
+                Download my CV
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-ink text-cream transition-transform duration-500 group-hover:translate-y-0.5 group-hover:bg-cream group-hover:text-ink">
+                  {cvBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                </span>
+              </button>
             </Reveal>
 
             <Reveal delay={0.2} className="mt-14">

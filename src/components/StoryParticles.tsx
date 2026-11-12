@@ -26,11 +26,12 @@ export default function StoryParticles({ ready }: { ready: boolean }) {
   const shapes = useMemo(() => storyShapes(word, '/images/portrait.jpg'), [word])
 
   // Element lookups, cached.
-  const els = useRef<{ slot: Element | null; card: Element | null; about: Element | null; hero: HTMLElement | null }>({
+  const els = useRef<{ slot: Element | null; card: Element | null; about: Element | null; hero: HTMLElement | null; foot: Element | null }>({
     slot: null,
     card: null,
     about: null,
     hero: null,
+    foot: null,
   })
   const find = () => {
     const e = els.current
@@ -38,18 +39,19 @@ export default function StoryParticles({ ready }: { ready: boolean }) {
     if (!e.card || !e.card.isConnected) e.card = document.querySelector('[data-portrait-card]')
     if (!e.about || !e.about.isConnected) e.about = document.getElementById('about')
     if (!e.hero || !e.hero.isConnected) e.hero = document.querySelector('main > section')
+    if (!e.foot || !e.foot.isConnected) e.foot = document.querySelector('[data-footer-slot]')
     return e
   }
 
   // Where shape a (name) and shape c (face) sit on screen, every frame.
   const track = useCallback(() => {
-    const { slot, card } = find()
+    const { slot, card, foot } = find()
     const centre = (el: Element | null) => {
       if (!el) return undefined
       const r = el.getBoundingClientRect()
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
     }
-    return { a: centre(slot), c: centre(card) }
+    return { a: centre(slot), c: centre(card), d: centre(foot) }
   }, [])
 
   // Scroll -> morph (0 name, 1 dust, 2 face), plus pausing once it's all off screen.
@@ -69,10 +71,15 @@ export default function StoryParticles({ ready }: { ready: boolean }) {
       const start = cardMidPage - vh * 1.15
       const end = cardMidPage - vh * 0.5
       const m2 = gsap.utils.clamp(0, 1, (y - start) / Math.max(1, end - start))
-      handle.current?.setMorph(m1 + m2)
+      // Face -> footer word as the page lifts off the footer (the curtain).
+      const maxScroll = document.documentElement.scrollHeight - vh
+      const footH = (document.querySelector('footer') as HTMLElement | null)?.offsetHeight ?? vh * 0.7
+      const f0 = maxScroll - footH - vh * 0.5
+      const m3 = gsap.utils.clamp(0, 1, (y - f0) / Math.max(1, maxScroll - f0))
+      handle.current?.setMorph(m1 + m2 + m3)
 
       const aboutBottom = about ? about.getBoundingClientRect().bottom : 1
-      const on = aboutBottom > 0
+      const on = aboutBottom > 0 || m3 > 0
       setActive((prev) => (prev === on ? prev : on))
     }
     gsap.ticker.add(tick)

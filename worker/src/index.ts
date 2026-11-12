@@ -3,6 +3,8 @@
  *
  *   GET  /projects   published projects from D1, ordered by display_order
  *   POST /contact    store a contact message in D1 (Turnstile-verified when a secret is set)
+ *   GET  /guestbook  latest 60 guestbook words
+ *   POST /guestbook  add one word (validated, rate-limited)
  *   GET  /presence   WebSocket upgrade into the shared PresenceRoom Durable Object
  *   GET  /health     liveness check
  *
@@ -142,6 +144,50 @@ async function postContact(req: Request, env: Env, origin: string | null): Promi
   return json({ ok: true }, 201, origin)
 }
 
+
+// ---------------------------------------------------------------------------
+// Guestbook: one short word per visitor, shown as grains in the sky section.
+// ---------------------------------------------------------------------------
+const WORD_RE = /^[\p{L}\p{N}][\p{L}\p{N} '!.-]{0,17}$/u
+const BLOCKED = ['fuck', 'shit', 'bitch', 'cunt', 'nigg', 'fag', 'porn', 'sex', 'http', 'www', '.com']
+
+async function getGuestbook(env: Env, origin: string | null): Promise<Response> {
+  const { results } = await env.DB.prepare(
+    'SELECT id, word, created_at FROM guestbook WHERE hidden = 0 ORDER BY id DESC LIMIT 60',
+  ).all<{ id: number; word: string; created_at: string }>()
+  return json(results, 200, origin, { 'Cache-Control': 'public, max-age=15' })
+}
+
+async function postGuestbook(req: Request, env: Env, origin: string | null): Promise<Response> {
+  if (!origin) return json({ error: 'Origin not allowed' }, 403, null)
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch {
+    return json({ error: 'Invalid JSON' }, 400, origin)
+  }
+  if (String(body.company ?? '')) return json({ ok: true }, 200, origin) // honeypot
+  const word = String(body.word ?? '').trim().replace(/\s+/g, ' ')
+  if (!WORD_RE.test(word)) return json({ error: 'One short word or two, letters and numbers only (max 18).' }, 400, origin)
+  const lower = word.toLowerCase()
+  if (BLOCKED.some((b) => lower.includes(b))) return json({ error: 'Let’s keep the sky friendly.' }, 400, origin)
+
+  const ip = req.headers.get('CF-Connecting-IP') ?? ''
+  const ipHash = ip ? (await sha256(`aroi-me-gb:${ip}`)).slice(0, 32) : null
+  if (ipHash) {
+    const row = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM guestbook WHERE ip_hash = ? AND created_at > datetime('now', '-1 hour')",
+    )
+      .bind(ipHash)
+      .first<{ n: number }>()
+    if ((row?.n ?? 0) >= 3) return json({ error: 'You have filled your part of the sky for now. Try later.' }, 429, origin)
+  }
+  const res = await env.DB.prepare('INSERT INTO guestbook (word, ip_hash) VALUES (?, ?) RETURNING id, word, created_at')
+    .bind(word, ipHash)
+    .first<{ id: number; word: string; created_at: string }>()
+  return json(res, 201, origin)
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url)
@@ -153,6 +199,8 @@ export default {
       if (url.pathname === '/health') return json({ ok: true }, 200, origin)
       if (url.pathname === '/projects' && req.method === 'GET') return await getProjects(env, origin)
       if (url.pathname === '/contact' && req.method === 'POST') return await postContact(req, env, origin)
+      if (url.pathname === '/guestbook' && req.method === 'GET') return await getGuestbook(env, origin)
+      if (url.pathname === '/guestbook' && req.method === 'POST') return await postGuestbook(req, env, origin)
       if (url.pathname === '/presence') {
         if (req.headers.get('Upgrade') !== 'websocket') return json({ error: 'Expected WebSocket' }, 426, origin)
         // WebSocket upgrades carry Origin too; only our sites may join the room.

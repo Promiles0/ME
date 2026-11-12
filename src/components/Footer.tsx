@@ -14,6 +14,7 @@ export default function Footer({ onHeight }: { onHeight: (h: number) => void }) 
   const lenis = useLenis()
   const root = useRef<HTMLElement>(null)
   const year = new Date().getFullYear()
+  const reducedMotion = prefersReducedMotion()
   const [time, setTime] = useState('')
 
   useEffect(() => {
@@ -92,9 +93,10 @@ export default function Footer({ onHeight }: { onHeight: (h: number) => void }) 
           </div>
         </div>
 
-        <p className="display flex select-none overflow-hidden text-[clamp(5rem,24vw,24rem)] leading-[0.8] text-cream" aria-label={profile.shortName}>
+        {/* The story grains rain into this word; the letters themselves are only a faint guide (full under reduced motion). */}
+        <p data-footer-slot className={`display flex w-fit select-none overflow-hidden text-[clamp(5rem,24vw,24rem)] leading-[0.8] ${reducedMotion ? 'text-cream' : 'text-cream/[0.07]'}`} aria-label={profile.shortName}>
           {profile.shortName.toUpperCase().split('').map((l, i) => (
-            <span key={i} data-letter aria-hidden className={`inline-block ${i % 2 ? 'display-outline' : ''}`}>
+            <span key={i} data-letter aria-hidden className={`inline-block ${i % 2 && reducedMotion ? 'display-outline' : ''}`}>
               {l}
             </span>
           ))}

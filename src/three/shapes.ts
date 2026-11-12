@@ -59,11 +59,12 @@ export function portraitShapes(src: string, cardFrac = 0.45, cardFracW = 1): Sha
  * the slot and the card every frame. Every grain carries its pixel tone from
  * the photo, so the name and the dust already have the face's colours.
  */
-export function storyShapes(word: string, src: string): ShapeBuilder {
+export function storyShapes(word: string, src: string, footerWord = 'AROI'): ShapeBuilder {
   return async (count, _worldWidth, view) => {
     const pxToWorld = view.w / window.innerWidth
     const slot = document.querySelector('[data-name-slot]')?.getBoundingClientRect()
     const card = document.querySelector('[data-portrait-card]')?.getBoundingClientRect()
+    const foot = document.querySelector('[data-footer-slot]')?.getBoundingClientRect()
     const nameW = (slot?.width ?? window.innerWidth * 0.8) * pxToWorld
     const faceW = (card?.width ?? 400) * pxToWorld * 0.88
 
@@ -81,6 +82,24 @@ export function storyShapes(word: string, src: string): ShapeBuilder {
       b[i * 3 + 1] = bell() * view.h * 0.5
       b[i * 3 + 2] = bell() * 3
     }
-    return { a, b, c: face.positions, shade: face.shade }
+    // d: the footer word. textPoints fills ~90% of the width it is given.
+    const footW = ((foot?.width ?? window.innerWidth * 0.9) / 0.9) * pxToWorld
+    const d = textPoints(footerWord, count, footW)
+    // Fit the grains to the footer word's box exactly (textPoints never upscales short words).
+    if (foot) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+      for (let i = 0; i < count; i++) {
+        minX = Math.min(minX, d[i * 3]); maxX = Math.max(maxX, d[i * 3])
+        minY = Math.min(minY, d[i * 3 + 1]); maxY = Math.max(maxY, d[i * 3 + 1])
+      }
+      const k = Math.min((foot.width * pxToWorld) / (maxX - minX), (foot.height * 0.82 * pxToWorld) / (maxY - minY))
+      const cx = (minX + maxX) / 2
+      const cy = (minY + maxY) / 2
+      for (let i = 0; i < count; i++) {
+        d[i * 3] = (d[i * 3] - cx) * k
+        d[i * 3 + 1] = (d[i * 3 + 1] - cy) * k
+      }
+    }
+    return { a, b, c: face.positions, d, shade: face.shade }
   }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Copy, CornerDownLeft, ExternalLink, FolderOpen, Hash, Search } from 'lucide-react'
+import { ArrowRight, Copy, CornerDownLeft, Download, ExternalLink, FolderOpen, Hash, Search } from 'lucide-react'
+import { downloadCV } from '../lib/cv'
 import { profile } from '../data/profile'
 import { projects } from '../data/projects'
 import { useLenis } from './SmoothScroll'
@@ -47,6 +48,7 @@ export default function CommandPalette() {
       ['skills', 'Skills', 'Toolkit and stack'],
       ['projects', 'Projects', 'Selected work'],
       ['contact', 'Contact', 'Send a message'],
+      ['guestbook', 'Guestbook', 'Leave a word in the sky'],
     ].map(([id, label, hint]) => ({ id: `go-${id}`, group: 'Navigate', label: `Go to ${label}`, hint, icon: <Hash className="h-4 w-4" />, run: () => go(id) }))
 
     const work: Command[] = projects.flatMap((p) => {
@@ -73,6 +75,14 @@ export default function CommandPalette() {
     })
 
     const contact: Command[] = [
+      {
+        id: 'download-cv',
+        group: 'Contact',
+        label: 'Download CV (PDF)',
+        hint: 'Generated from this site',
+        icon: <Download className="h-4 w-4" />,
+        run: () => void downloadCV(),
+      },
       {
         id: 'copy-email',
         group: 'Contact',

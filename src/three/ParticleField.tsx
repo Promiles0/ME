@@ -14,7 +14,8 @@ import { isLowPowerDevice } from '../lib/motion'
  * portrait (a: scattered, b/c: the face stippled from a photo).
  */
 
-export type Tracker = () => { a?: { x: number; y: number }; c?: { x: number; y: number } } | null
+type Pt = { x: number; y: number }
+export type Tracker = () => { a?: Pt; c?: Pt; d?: Pt } | null
 
 export type ParticleFieldHandle = {
   /** 0 = shape a, 1 = shape b, 2 = shape c. Values in between blend. */
@@ -38,15 +39,19 @@ const vertex = /* glsl */ `
   uniform float uKick;
   uniform vec3 uOffA;
   uniform vec3 uOffC;
+  uniform vec3 uOffD;
   uniform float uFloat;
 
   attribute vec3 aPosB;
   attribute vec3 aPosC;
+  attribute vec3 aPosD;
   attribute float aRand;
   attribute float aShade;
 
   varying float vShade;
   varying float vForce;
+  varying float vS3;
+  varying float vR;
 
   void main() {
     float m1 = smoothstep(0.0, 1.0, clamp(uMorph, 0.0, 1.0));
@@ -54,6 +59,8 @@ const vertex = /* glsl */ `
     // Stagger each particle a little so the morph ripples rather than snaps.
     float s1 = smoothstep(0.0, 1.0, (m1 - aRand * 0.25) / 0.75);
     float s2 = smoothstep(0.0, 1.0, (m2 - aRand * 0.25) / 0.75);
+    float m3 = smoothstep(0.0, 1.0, clamp(uMorph - 2.0, 0.0, 1.0));
+    float s3 = smoothstep(0.0, 1.0, (m3 - aRand * 0.25) / 0.75);
     vec3 pb = aPosB;
     vec3 pc = aPosC;
     float waveH = 0.0;
@@ -77,6 +84,8 @@ const vertex = /* glsl */ `
     // uOffA / uOffC move shape a and shape c so they can follow elements on the page.
     vec3 p = mix(position + uOffA, pb, s1);
     p = mix(p, pc + uOffC, s2);
+    // Fourth stage (optional): the face lets go and the grains rain into the footer word.
+    p = mix(p, aPosD + uOffD, s3);
 
     // Burst: a click kick (any mode), plus mid-morph bursts in hero mode.
     vec3 dir = normalize(vec3(sin(aRand * 91.7), cos(aRand * 47.3), sin(aRand * 13.1)) + 0.0001);
@@ -87,7 +96,7 @@ const vertex = /* glsl */ `
     // Idle drift: slow, organic breathing.
     float t = uTime * 0.6;
     // While in the middle shape (b), grains float far more freely: dust in the air.
-    p += (uDrift + uFloat * s1 * (1.0 - s2)) * vec3(
+    p += (uDrift + uFloat * s1 * (1.0 - s2) + uFloat * 2.4 * s3 * (1.0 - s3)) * vec3(
       sin(t + aRand * 6.2831),
       cos(t * 0.8 + aRand * 3.1),
       sin(t * 0.7 + aRand * 2.0)
@@ -100,8 +109,10 @@ const vertex = /* glsl */ `
     p += normalize(d + 0.0001) * force * 0.9;
     vForce = max(force, uMode * s2 * clamp(waveH * 2.2, 0.0, 1.0) * 0.55);
     // Tone: random mix (cream and ink) for the name and dust, photo shading once in the face.
-    float tone = mix(aRand, aShade, s2);
+    float tone = mix(mix(aRand, aShade, s2), aRand, s3);
     vShade = tone;
+    vS3 = s3;
+    vR = aRand;
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
@@ -117,6 +128,8 @@ const fragment = /* glsl */ `
   uniform float uSplit;
   varying float vShade;
   varying float vForce;
+  varying float vS3;
+  varying float vR;
 
   void main() {
     vec2 uv = gl_PointCoord - 0.5;
@@ -124,6 +137,9 @@ const fragment = /* glsl */ `
     if (r > 0.5) discard;
     float alpha = smoothstep(0.5, 0.15, r);
     vec3 col = mix(uColorA, uColorB, step(uSplit, vShade));
+    // On the dark footer the grains turn cream and sage so they read on ink.
+    vec3 colD = mix(vec3(0.91, 0.82, 0.71), vec3(0.65, 0.655, 0.61), step(0.72, vR));
+    col = mix(col, colD, vS3);
     col = mix(col, uColorHot, vForce);
     gl_FragColor = vec4(col, alpha * 0.95);
   }
@@ -182,6 +198,7 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
       g.setAttribute('position', new THREE.BufferAttribute(set.a, 3))
       g.setAttribute('aPosB', new THREE.BufferAttribute(set.b, 3))
       g.setAttribute('aPosC', new THREE.BufferAttribute(set.c, 3))
+      g.setAttribute('aPosD', new THREE.BufferAttribute(set.d ?? set.c, 3))
       g.setAttribute('aRand', new THREE.BufferAttribute(rand, 1))
       g.setAttribute('aShade', new THREE.BufferAttribute(set.shade ?? rand, 1))
       g.computeBoundingSphere()
@@ -220,6 +237,7 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
           uKick: { value: 0 },
           uOffA: { value: new THREE.Vector3() },
           uOffC: { value: new THREE.Vector3() },
+          uOffD: { value: new THREE.Vector3() },
           uFloat: { value: floatAmount },
         },
       }),
@@ -286,6 +304,7 @@ function Cloud({ shapes, count, fit, handle, interactive, mouseStrength, lean: l
         out.set((pt.x / size.width - 0.5) * viewport.width, -(pt.y / size.height - 0.5) * viewport.height, 0)
       if (t?.a) toWorld(t.a, u.uOffA.value as THREE.Vector3)
       if (t?.c) toWorld(t.c, u.uOffC.value as THREE.Vector3)
+      if (t?.d) toWorld(t.d, u.uOffD.value as THREE.Vector3)
     }
     mouse.current.lerp(target.current, Math.min(1, delta * 9))
     ;(u.uMouse.value as THREE.Vector3).copy(mouse.current)
